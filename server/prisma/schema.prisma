@@ -1,15 +1,95 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model Teacher {
+  id              String            @id @default(uuid())
+  name            String
+  email           String            @unique
+  subjects        TeacherSubject[]
+  availability    TeacherTimeSlot[]
+  scheduleEntries ScheduleEntry[]
+}
+
+model Room {
+  id              String          @id @default(uuid())
+  name            String
+  capacity        Int
+  hasLabEquipment Boolean         @default(false)
+  scheduleEntries ScheduleEntry[]
+}
+
+model Subject {
+  id                String           @id @default(uuid())
+  name              String
+  code              String           @unique
+  hoursPerWeek      Int
+  requiresLab       Boolean          @default(false)
+  maxSessionsPerDay Int              @default(1)
+  teachers          TeacherSubject[]
+  scheduleEntries   ScheduleEntry[]
+}
+
+model ClassGroup {
+  id              String          @id @default(uuid())
+  name            String
+  studentCount    Int
+  scheduleEntries ScheduleEntry[]
+}
+
+model TimeSlot {
+  id           String            @id @default(uuid())
+  day          String            
+  startTime    String            
+  endTime      String            
+  teacherSlots TeacherTimeSlot[]
+  scheduleEntries ScheduleEntry[]
+}
+
+model Timetable {
+  id        String          @id @default(uuid())
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  entries   ScheduleEntry[]
+}
+
+model ScheduleEntry {
+  id           String     @id @default(uuid())
+  timetable    Timetable  @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+  timetableId  String
+  teacher      Teacher    @relation(fields: [teacherId], references: [id])
+  teacherId    String
+  room         Room       @relation(fields: [roomId], references: [id])
+  roomId       String
+  subject      Subject    @relation(fields: [subjectId], references: [id])
+  subjectId    String
+  classGroup   ClassGroup @relation(fields: [classGroupId], references: [id])
+  classGroupId String
+  timeSlot     TimeSlot   @relation(fields: [timeSlotId], references: [id])
+  timeSlotId   String
+
+  @@unique([timetableId, teacherId, timeSlotId])   
+  @@unique([timetableId, roomId, timeSlotId])       
+  @@unique([timetableId, classGroupId, timeSlotId])
+}
+
+model TeacherSubject {
+  teacher   Teacher @relation(fields: [teacherId], references: [id])
+  teacherId String
+  subject   Subject @relation(fields: [subjectId], references: [id])
+  subjectId String
+  @@id([teacherId, subjectId])
+}
+
+model TeacherTimeSlot {
+  teacher    Teacher  @relation(fields: [teacherId], references: [id])
+  teacherId  String
+  timeSlot   TimeSlot @relation(fields: [timeSlotId], references: [id])
+  timeSlotId String
+  @@id([teacherId, timeSlotId])
 }
