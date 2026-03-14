@@ -1,4 +1,5 @@
 export interface TimeSlotInterface {
+  getId(): string | undefined;
   equals(other: TimeSlotInterface): boolean;
   overlapsWith(other: TimeSlotInterface): boolean;
   getStartTime(): Date;
@@ -8,18 +9,24 @@ export interface TimeSlotInterface {
 }
 
 export class TimeSlot implements TimeSlotInterface {
+  private readonly _id: string | undefined;
   private readonly day: string;
   private readonly startTime: Date;
   private readonly endTime: Date;
 
-  constructor(day: string, startTime: Date, endTime: Date) {
+  constructor(day: string, startTime: Date, endTime: Date, id?: string) {
     if (startTime >= endTime) {
       throw new Error("Start time must be before end time");
     }
 
+    this._id = id;
     this.day = day;
     this.startTime = startTime;
     this.endTime = endTime;
+  }
+
+  getId(): string | undefined {
+    return this._id;
   }
 
   equals(other: TimeSlotInterface): boolean {
