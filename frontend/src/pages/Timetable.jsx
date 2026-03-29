@@ -56,8 +56,8 @@ export default function Timetable() {
   const [error, setError] = useState(null);
   const [generating, setGenerating] = useState(false);
 
-  // Filters
-  const [filter, setFilter] = useState('all'); // all | class | teacher | room
+  
+  const [filter, setFilter] = useState('all'); 
   const [classGroups, setClassGroups] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [rooms, setRooms] = useState([]);
@@ -130,7 +130,7 @@ export default function Timetable() {
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">{error}</div>}
 
-      {/* Filter bar */}
+      {}
       <div className="bg-white shadow rounded-xl p-4 flex flex-wrap gap-4 items-end">
         <div>
           <label className="block text-xs text-gray-500 mb-1">Filter by</label>
