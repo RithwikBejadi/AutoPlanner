@@ -1,18 +1,25 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../components/Toast';
 
 export default function ClassGroups() {
-  const { classGroups, addClassGroup, deleteClassGroup } = useApp();
+  const { classGroups, addClassGroup, deleteClassGroup, fetchClassGroups } = useApp();
   const toast = useToast();
-  const [formData, setFormData] = useState({ name: '', size: 30 });
+  const [formData, setFormData] = useState({ name: '', studentCount: 30 });
+
+  useEffect(() => {
+    fetchClassGroups();
+  }, [fetchClassGroups]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await addClassGroup({ ...formData, size: parseInt(formData.size, 10), requirements: [] });
+      await addClassGroup({
+        name: formData.name,
+        studentCount: Number(formData.studentCount),
+      });
       toast.success('Class Group added successfully');
-      setFormData({ name: '', size: 30 });
+      setFormData({ name: '', studentCount: 30 });
     } catch (error) {
       toast.error('Failed to add class group');
     }
@@ -50,7 +57,7 @@ export default function ClassGroups() {
                         </div>
                       </td>
                       <td className="px-4 py-4 text-sm text-on-surface-variant">
-                        {cls.size} students
+                        {cls.studentCount} students
                       </td>
                       <td className="px-4 py-4 text-right">
                         <button onClick={() => deleteClassGroup(cls.id)} className="p-1 hover:bg-surface-container-highest rounded transition-colors text-on-surface-variant group-hover:text-primary">
@@ -79,7 +86,7 @@ export default function ClassGroups() {
               </div>
               <div>
                 <label className="block text-[10px] uppercase tracking-widest font-bold text-on-surface-variant mb-1.5">Cohort Size</label>
-                <input required value={formData.size} onChange={e => setFormData({...formData, size: e.target.value})} className="w-full bg-surface-container-lowest border-0 ring-1 ring-outline-variant/30 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:bg-white transition-all outline-none" type="number" min="1"/>
+                <input required value={formData.studentCount} onChange={e => setFormData({...formData, studentCount: e.target.value})} className="w-full bg-surface-container-lowest border-0 ring-1 ring-outline-variant/30 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:bg-white transition-all outline-none" type="number" min="1"/>
               </div>
               <div className="pt-4">
                 <button type="submit" className="w-full bg-primary text-on-primary font-bold py-3 rounded-lg text-sm hover:opacity-90 active:scale-[0.98] transition-all">Save Entity</button>

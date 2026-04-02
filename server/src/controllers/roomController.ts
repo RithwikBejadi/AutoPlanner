@@ -77,10 +77,12 @@ export class RoomController {
       const { name, capacity, hasLabEquipment } = req.body;
       const userId = req.user!.id;
 
-      if (!name || !capacity) {
+      const normalizedCapacity = Number(capacity);
+
+      if (!name || !Number.isFinite(normalizedCapacity)) {
         res.status(400).json({
           success: false,
-          error: 'Missing required fields: name, capacity'
+          error: 'Missing or invalid required fields: name, capacity'
         });
         return;
       }
@@ -88,8 +90,8 @@ export class RoomController {
       const room = new Room(
         randomUUID(),
         name,
-        capacity,
-        hasLabEquipment || false
+        normalizedCapacity,
+        Boolean(hasLabEquipment)
       );
 
       const created = await roomRepo.create(room, userId);
@@ -118,6 +120,8 @@ export class RoomController {
       const { name, capacity, hasLabEquipment } = req.body;
       const userId = req.user!.id;
 
+      const normalizedCapacity = Number(capacity);
+
       if (!id || typeof id !== 'string') {
         res.status(400).json({
           success: false,
@@ -135,7 +139,15 @@ export class RoomController {
         return;
       }
 
-      const room = new Room(id, name, capacity, hasLabEquipment);
+      if (!name || !Number.isFinite(normalizedCapacity)) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing or invalid required fields: name, capacity'
+        });
+        return;
+      }
+
+      const room = new Room(id, name, normalizedCapacity, Boolean(hasLabEquipment));
       const updated = await roomRepo.update(id, room, userId);
 
       res.json({

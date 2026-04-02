@@ -7,6 +7,12 @@ import { randomUUID } from 'crypto';
 
 const teacherRepo = new PrismaTeacherRepository();
 
+const formatTime = (date: Date): string => {
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
+};
+
 export class TeacherController {
   
   async getAll(req: AuthRequest, res: Response): Promise<void> {
@@ -20,10 +26,12 @@ export class TeacherController {
           id: t.getId(),
           name: t.getName(),
           subjectIds: t.getQualifiedSubjects(),
+          timeSlotIds: t.getAvailability().map(ts => ts.getId()).filter((id): id is string => Boolean(id)),
           availability: t.getAvailability().map(ts => ({
+            id: ts.getId(),
             day: ts.getDay(),
-            startTime: ts.getStartTime().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            endTime: ts.getEndTime().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            startTime: formatTime(ts.getStartTime()),
+            endTime: formatTime(ts.getEndTime())
           }))
         }))
       });
@@ -65,10 +73,12 @@ export class TeacherController {
           id: teacher.getId(),
           name: teacher.getName(),
           subjectIds: teacher.getQualifiedSubjects(),
+          timeSlotIds: teacher.getAvailability().map(ts => ts.getId()).filter((slotId): slotId is string => Boolean(slotId)),
           availability: teacher.getAvailability().map(ts => ({
+            id: ts.getId(),
             day: ts.getDay(),
-            startTime: ts.getStartTime().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            endTime: ts.getEndTime().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            startTime: formatTime(ts.getStartTime()),
+            endTime: formatTime(ts.getEndTime())
           }))
         }
       });
@@ -110,10 +120,12 @@ export class TeacherController {
           id: created.getId(),
           name: created.getName(),
           subjectIds: created.getQualifiedSubjects(),
+          timeSlotIds: created.getAvailability().map(ts => ts.getId()).filter((slotId): slotId is string => Boolean(slotId)),
           availability: created.getAvailability().map(ts => ({
+            id: ts.getId(),
             day: ts.getDay(),
-            startTime: ts.getStartTime().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            endTime: ts.getEndTime().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            startTime: formatTime(ts.getStartTime()),
+            endTime: formatTime(ts.getEndTime())
           }))
         }
       });
@@ -167,10 +179,12 @@ export class TeacherController {
           id: updated.getId(),
           name: updated.getName(),
           subjectIds: updated.getQualifiedSubjects(),
+          timeSlotIds: updated.getAvailability().map(ts => ts.getId()).filter((slotId): slotId is string => Boolean(slotId)),
           availability: updated.getAvailability().map(ts => ({
+            id: ts.getId(),
             day: ts.getDay(),
-            startTime: ts.getStartTime().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            endTime: ts.getEndTime().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            startTime: formatTime(ts.getStartTime()),
+            endTime: formatTime(ts.getEndTime())
           }))
         }
       });

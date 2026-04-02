@@ -16,6 +16,11 @@ const classGroupRepo   = new PrismaClassGroupRepository();
 const timeSlotRepo     = new PrismaTimeSlotRepository();
 const schedulerEngine  = new SchedulerEngine();
 
+interface GenerationIssue {
+  code: string;
+  message: string;
+}
+
 
 
 function serializeEntry(entry: {
@@ -30,8 +35,11 @@ function serializeEntry(entry: {
     getEndTime(): Date;
   };
 }) {
-  const fmt = (d: Date) =>
-    d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const fmt = (d: Date) => {
+    const hours = d.getHours().toString().padStart(2, '0');
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
 
   return {
     id: entry.getId(),
@@ -50,11 +58,86 @@ function serializeEntry(entry: {
 
 
 export class TimetableController {
-  async getAll(req: Request, res: Response) {
+  private validateGenerationInputs(input: {
+    teachers: Awaited<ReturnType<typeof teacherRepo.findAllByUserId>>;
+    rooms: Awaited<ReturnType<typeof roomRepo.findAllByUserId>>;
+    subjects: Awaited<ReturnType<typeof subjectRepo.findAllByUserId>>;
+    classGroups: Awaited<ReturnType<typeof classGroupRepo.findAllByUserId>>;
+    timeSlots: Awaited<ReturnType<typeof timeSlotRepo.findAllByUserId>>;
+  }): GenerationIssue[] {
+    const issues: GenerationIssue[] = [];
+    const { teachers, rooms, subjects, classGroups, timeSlots } = input;
+
+    if (teachers.length === 0) {
+      issues.push({ code: 'NO_TEACHERS', message: 'At least one teacher is required' });
+    }
+    if (rooms.length === 0) {
+      issues.push({ code: 'NO_ROOMS', message: 'At least one room is required' });
+    }
+    if (subjects.length === 0) {
+      issues.push({ code: 'NO_SUBJECTS', message: 'At least one subject is required' });
+    }
+    if (classGroups.length === 0) {
+      issues.push({ code: 'NO_CLASS_GROUPS', message: 'At least one class group is required' });
+    }
+    if (timeSlots.length === 0) {
+      issues.push({ code: 'NO_TIME_SLOTS', message: 'At least one time slot is required' });
+    }
+
+    const subjectIdSet = new Set(subjects.map((s) => s.getId()));
+
+    const invalidTeacherSubjectLinks = teachers.filter((teacher) =>
+      teacher.getQualifiedSubjects().some((subjectId) => !subjectIdSet.has(subjectId))
+    );
+    if (invalidTeacherSubjectLinks.length > 0) {
+      issues.push({
+        code: 'INVALID_TEACHER_SUBJECT_LINKS',
+        message: 'Some teachers are linked to subjects that no longer exist'
+      });
+    }
+
+    const subjectsWithoutTeacher = subjects.filter(
+      (subject) => !teachers.some((teacher) => teacher.isQualifiedFor(subject.getId()))
+    );
+    if (subjectsWithoutTeacher.length > 0) {
+      const names = subjectsWithoutTeacher.map((s) => s.getCode()).join(', ');
+      issues.push({
+        code: 'UNASSIGNED_SUBJECTS',
+        message: `Assign at least one teacher to these subjects: ${names}`
+      });
+    }
+
+    const classGroupsWithoutRoom = classGroups.filter(
+      (classGroup) => !rooms.some((room) => room.canAccommodate(classGroup.getStudentCount()))
+    );
+    if (classGroupsWithoutRoom.length > 0) {
+      const names = classGroupsWithoutRoom.map((cg) => cg.getName()).join(', ');
+      issues.push({
+        code: 'CLASS_GROUP_CAPACITY_MISMATCH',
+        message: `No room can accommodate these class groups: ${names}`
+      });
+    }
+
+    const labSubjectsWithoutLabs = subjects.filter(
+      (subject) => subject.requiresLab() && !rooms.some((room) => room.hasLabEquipment())
+    );
+    if (labSubjectsWithoutLabs.length > 0) {
+      const names = labSubjectsWithoutLabs.map((s) => s.getCode()).join(', ');
+      issues.push({
+        code: 'LAB_ROOMS_REQUIRED',
+        message: `These lab subjects require at least one lab-enabled room: ${names}`
+      });
+    }
+
+    return issues;
+  }
+
+  async getAll(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const userId = (req as any).user?.id;
+      const userId = req.user?.id;
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized', message: 'User not authenticated' });
+        res.status(401).json({ error: 'Unauthorized', message: 'User not authenticated' });
+        return;
       }
 
       const timetables = await timetableRepo.findAllByUserId(userId);
@@ -65,12 +148,12 @@ export class TimetableController {
         entryCount: t.getEntries().length,
       }));
 
-      return res.json({
+      res.json({
         data: data.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime())
       });
     } catch (error) {
       console.error('Failed to fetch timetables', error);
-      return res.status(500).json({ error: 'Internal Server Error' });
+      res.status(500).json({ error: 'Internal Server Error' });
     }
   }
 
@@ -86,6 +169,24 @@ export class TimetableController {
           classGroupRepo.findAllByUserId(userId),
           timeSlotRepo.findAllByUserId(userId),
         ]);
+
+      const issues = this.validateGenerationInputs({
+        teachers,
+        rooms,
+        subjects,
+        classGroups,
+        timeSlots,
+      });
+
+      if (issues.length > 0) {
+        res.status(422).json({
+          success: false,
+          error: 'Missing or invalid scheduling inputs',
+          message: 'Please complete the required setup before generating a timetable',
+          details: issues,
+        });
+        return;
+      }
 
       
       const result = schedulerEngine.generate({
@@ -116,10 +217,13 @@ export class TimetableController {
           : `Timetable generated with ${result.stats.unscheduledCount} unscheduled session(s)`,
       });
     } catch (error) {
-      res.status(400).json({
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      const status = message.startsWith('Cannot generate timetable') ? 422 : 500;
+
+      res.status(status).json({
         success: false,
-        error:   'Failed to generate timetable',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to generate timetable',
+        message,
       });
     }
   }

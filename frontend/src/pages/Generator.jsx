@@ -23,7 +23,46 @@ export default function Generator() {
     fetchSubjects();
     fetchClassGroups();
     fetchTimeSlots();
-  }, []);
+  }, [fetchTeachers, fetchRooms, fetchSubjects, fetchClassGroups, fetchTimeSlots]);
+
+  const getReadinessErrors = () => {
+    const errors = [];
+
+    if (teachers.length === 0) errors.push('Add at least one teacher');
+    if (rooms.length === 0) errors.push('Add at least one room');
+    if (subjects.length === 0) errors.push('Add at least one subject');
+    if (classGroups.length === 0) errors.push('Add at least one class group');
+    if (timeSlots.length === 0) errors.push('Add at least one time slot');
+
+    const subjectsWithoutTeacher = subjects.filter(
+      (subject) => !teachers.some((teacher) => (teacher.subjectIds || []).includes(subject.id))
+    );
+    if (subjectsWithoutTeacher.length > 0) {
+      errors.push('Assign teachers to all subjects before generating');
+    }
+
+    const teachersWithoutAvailability = teachers.filter(
+      (teacher) => (teacher.timeSlotIds || []).length === 0 && (teacher.availability || []).length === 0
+    );
+    if (teachersWithoutAvailability.length > 0) {
+      errors.push('Assign at least one availability slot for every teacher');
+    }
+
+    const classGroupsWithoutRooms = classGroups.filter(
+      (classGroup) => !rooms.some((room) => room.capacity >= classGroup.studentCount)
+    );
+    if (classGroupsWithoutRooms.length > 0) {
+      errors.push('Increase room capacities or reduce class group sizes');
+    }
+
+    const hasLabSubjects = subjects.some((subject) => subject.requiresLab);
+    const hasLabRooms = rooms.some((room) => room.hasLabEquipment);
+    if (hasLabSubjects && !hasLabRooms) {
+      errors.push('At least one lab room is required for lab subjects');
+    }
+
+    return errors;
+  };
 
   const addLog = (msg, color = "") => {
     setLogs(prev => [...prev, { 
@@ -36,8 +75,9 @@ export default function Generator() {
   const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
   const startGeneration = async () => {
-    if (teachers.length === 0 || rooms.length === 0 || subjects.length === 0 || classGroups.length === 0 || timeSlots.length === 0) {
-      toast.error('Please add teachers, rooms, subjects, classes, and time slots before generating');
+    const readinessErrors = getReadinessErrors();
+    if (readinessErrors.length > 0) {
+      toast.error(readinessErrors[0]);
       return;
     }
 
@@ -143,14 +183,7 @@ export default function Generator() {
     navigate('/timetable');
   };
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!isGenerating && !isDone && teachers.length > 0) {
-        startGeneration();
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [teachers.length, rooms.length, subjects.length, classGroups.length, timeSlots.length]);
+  const readinessErrors = getReadinessErrors();
 
   const successRate = result?.stats 
     ? ((result.stats.scheduledCount / result.stats.totalTasks) * 100).toFixed(1)
@@ -186,8 +219,9 @@ export default function Generator() {
           {!isGenerating && !isDone && (
             <button 
               onClick={startGeneration}
-              disabled={teachers.length === 0}
-              className={`px-5 py-2.5 text-[13px] font-bold tracking-wide uppercase transition-all rounded-lg ${teachers.length > 0 ? 'bg-primary text-on-primary hover:opacity-90' : 'bg-primary/50 text-on-primary/50 cursor-not-allowed'}`}
+              disabled={readinessErrors.length > 0}
+              title={readinessErrors.length > 0 ? readinessErrors[0] : 'Start timetable generation'}
+              className={`px-5 py-2.5 text-[13px] font-bold tracking-wide uppercase transition-all rounded-lg ${readinessErrors.length === 0 ? 'bg-primary text-on-primary hover:opacity-90' : 'bg-primary/50 text-on-primary/50 cursor-not-allowed'}`}
             >
               Start Generation
             </button>

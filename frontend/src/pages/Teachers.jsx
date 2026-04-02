@@ -1,21 +1,68 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../components/Toast';
 
 export default function Teachers() {
-  const { teachers, addTeacher, deleteTeacher } = useApp();
+  const {
+    teachers,
+    subjects,
+    timeSlots,
+    addTeacher,
+    deleteTeacher,
+    fetchTeachers,
+    fetchSubjects,
+    fetchTimeSlots,
+  } = useApp();
   const toast = useToast();
-  const [formData, setFormData] = useState({ name: '', email: '', department: '' });
+  const [formData, setFormData] = useState({ name: '', subjectIds: [], timeSlotIds: [] });
+
+  useEffect(() => {
+    fetchTeachers();
+    fetchSubjects();
+    fetchTimeSlots();
+  }, [fetchTeachers, fetchSubjects, fetchTimeSlots]);
+
+  const subjectMap = useMemo(
+    () => new Map(subjects.map((subject) => [subject.id, subject])),
+    [subjects]
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (formData.subjectIds.length === 0) {
+      toast.error('Select at least one subject for this teacher');
+      return;
+    }
+
+    if (formData.timeSlotIds.length === 0) {
+      toast.error('Select at least one available time slot for this teacher');
+      return;
+    }
+
     try {
-      await addTeacher(formData);
+      await addTeacher({
+        name: formData.name.trim(),
+        subjectIds: formData.subjectIds,
+        timeSlotIds: formData.timeSlotIds,
+      });
       toast.success('Teacher added successfully');
-      setFormData({ name: '', email: '', department: '' });
+      setFormData({ name: '', subjectIds: [], timeSlotIds: [] });
     } catch (error) {
       toast.error('Failed to add teacher');
     }
+  };
+
+  const toggleSelection = (key, value) => {
+    setFormData((prev) => {
+      const hasValue = prev[key].includes(value);
+      return {
+        ...prev,
+        [key]: hasValue
+          ? prev[key].filter((item) => item !== value)
+          : [...prev[key], value],
+      };
+    });
   };
 
   const getInitials = (name) => {
@@ -41,7 +88,8 @@ export default function Teachers() {
                 <thead className="bg-surface-container-low border-b border-outline-variant/30">
                   <tr>
                     <th className="px-4 py-4 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">Name</th>
-                    <th className="px-4 py-4 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">Department</th>
+                    <th className="px-4 py-4 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">Subjects</th>
+                    <th className="px-4 py-4 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">Availability</th>
                     <th className="px-4 py-4 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant text-right">Actions</th>
                   </tr>
                 </thead>
@@ -53,12 +101,31 @@ export default function Teachers() {
                           <div className="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center text-xs font-bold text-primary">{getInitials(teacher.name)}</div>
                           <div>
                             <p className="text-sm font-semibold text-primary">{teacher.name}</p>
-                            <p className="text-[11px] text-on-surface-variant">{teacher.email}</p>
+                            <p className="text-[11px] text-on-surface-variant">{teacher.subjectIds?.length || 0} subjects assigned</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <span className="text-xs bg-surface-container-high px-2 py-1 rounded text-primary font-medium">{teacher.department || 'General'}</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(teacher.subjectIds || []).slice(0, 3).map((subjectId) => {
+                            const subject = subjectMap.get(subjectId);
+                            return (
+                              <span key={subjectId} className="text-xs bg-surface-container-high px-2 py-1 rounded text-primary font-medium">
+                                {subject?.code || 'Unknown'}
+                              </span>
+                            );
+                          })}
+                          {(teacher.subjectIds || []).length > 3 && (
+                            <span className="text-xs text-on-surface-variant">+{teacher.subjectIds.length - 3} more</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="text-xs text-on-surface-variant">
+                          {(teacher.timeSlotIds || []).length > 0
+                            ? `${teacher.timeSlotIds.length} slots selected`
+                            : `${teacher.availability?.length || 0} slots available`}
+                        </div>
                       </td>
                       <td className="px-4 py-4 text-right">
                         <button onClick={() => deleteTeacher(teacher.id)} className="p-1 hover:bg-surface-container-highest rounded transition-colors text-on-surface-variant group-hover:text-primary">
@@ -69,7 +136,7 @@ export default function Teachers() {
                   ))}
                   {teachers.length === 0 && (
                     <tr>
-                      <td colSpan="3" className="px-4 py-8 text-center text-on-surface-variant text-sm">No teachers found.</td>
+                      <td colSpan="4" className="px-4 py-8 text-center text-on-surface-variant text-sm">No teachers found.</td>
                     </tr>
                   )}
                 </tbody>
@@ -86,15 +153,47 @@ export default function Teachers() {
                 <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-surface-container-lowest border-0 ring-1 ring-outline-variant/30 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:bg-white transition-all outline-none" placeholder="e.g. Dr. Robert Oppenheimer" type="text"/>
               </div>
               <div>
-                <label className="block text-[10px] uppercase tracking-widest font-bold text-on-surface-variant mb-1.5">Department</label>
-                <input value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})} className="w-full bg-surface-container-lowest border-0 ring-1 ring-outline-variant/30 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:bg-white transition-all outline-none" placeholder="e.g. Mathematics" type="text"/>
+                <label className="block text-[10px] uppercase tracking-widest font-bold text-on-surface-variant mb-2">Qualified Subjects</label>
+                <div className="max-h-32 overflow-y-auto rounded-lg border border-outline-variant/30 bg-surface-container-lowest p-2 space-y-2">
+                  {subjects.map((subject) => (
+                    <label key={subject.id} className="flex items-center gap-2 text-sm text-on-surface-variant">
+                      <input
+                        type="checkbox"
+                        checked={formData.subjectIds.includes(subject.id)}
+                        onChange={() => toggleSelection('subjectIds', subject.id)}
+                        className="w-4 h-4 text-primary bg-surface-container-lowest border-outline-variant/30 rounded"
+                      />
+                      <span>{subject.code} - {subject.name}</span>
+                    </label>
+                  ))}
+                  {subjects.length === 0 && <p className="text-xs text-on-surface-variant">Add subjects first.</p>}
+                </div>
               </div>
               <div>
-                <label className="block text-[10px] uppercase tracking-widest font-bold text-on-surface-variant mb-1.5">Email Address</label>
-                <input required value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full bg-surface-container-lowest border-0 ring-1 ring-outline-variant/30 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:bg-white transition-all outline-none" placeholder="name@school.edu" type="email"/>
+                <label className="block text-[10px] uppercase tracking-widest font-bold text-on-surface-variant mb-2">Availability Slots</label>
+                <div className="max-h-36 overflow-y-auto rounded-lg border border-outline-variant/30 bg-surface-container-lowest p-2 space-y-2">
+                  {timeSlots.map((slot) => (
+                    <label key={slot.id} className="flex items-center gap-2 text-sm text-on-surface-variant">
+                      <input
+                        type="checkbox"
+                        checked={formData.timeSlotIds.includes(slot.id)}
+                        onChange={() => toggleSelection('timeSlotIds', slot.id)}
+                        className="w-4 h-4 text-primary bg-surface-container-lowest border-outline-variant/30 rounded"
+                      />
+                      <span>{slot.day} {slot.startTime} - {slot.endTime}</span>
+                    </label>
+                  ))}
+                  {timeSlots.length === 0 && <p className="text-xs text-on-surface-variant">Add time slots first.</p>}
+                </div>
               </div>
               <div className="pt-4">
-                <button type="submit" className="w-full bg-primary text-on-primary font-bold py-3 rounded-lg text-sm hover:opacity-90 active:scale-[0.98] transition-all">Save Entity</button>
+                <button
+                  type="submit"
+                  disabled={subjects.length === 0 || timeSlots.length === 0}
+                  className="w-full bg-primary text-on-primary font-bold py-3 rounded-lg text-sm hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Save Entity
+                </button>
               </div>
             </form>
           </div>

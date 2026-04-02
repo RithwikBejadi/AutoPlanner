@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import Button from './ui/Button';
 
+const isDev = import.meta.env.DEV;
+
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
@@ -61,7 +63,7 @@ class ErrorBoundary extends Component {
               </div>
             )}
 
-            {process.env.NODE_ENV === 'development' && this.state.errorInfo && (
+            {isDev && this.state.errorInfo && (
               <details className="bg-surface-container-high rounded-xl p-4 border border-outline-variant/10">
                 <summary className="text-sm font-medium text-on-surface cursor-pointer hover:text-primary transition-colors">
                   Stack trace (development only)

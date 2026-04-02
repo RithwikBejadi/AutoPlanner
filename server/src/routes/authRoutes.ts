@@ -1,12 +1,11 @@
 import { Router, type Response } from 'express';
 import { OAuth2Client } from 'google-auth-library';
 import { PrismaUserRepository } from '../repositories/index.js';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../database/prisma.js';
 import { signToken, getCookieOptions } from '../utils/auth.js';
 import { authenticate, optionalAuth, type AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 const userRepository = new PrismaUserRepository(prisma);
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';

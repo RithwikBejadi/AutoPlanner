@@ -1,18 +1,33 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../components/Toast';
 
 export default function Subjects() {
-  const { subjects, addSubject, deleteSubject } = useApp();
+  const { subjects, addSubject, deleteSubject, fetchSubjects } = useApp();
   const toast = useToast();
-  const [formData, setFormData] = useState({ name: '', code: '', requiresLab: false });
+  const [formData, setFormData] = useState({
+    name: '',
+    code: '',
+    hoursPerWeek: 4,
+    maxSessionsPerDay: 2,
+    requiresLab: false,
+  });
+
+  useEffect(() => {
+    fetchSubjects();
+  }, [fetchSubjects]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await addSubject(formData);
+      await addSubject({
+        ...formData,
+        code: formData.code.toUpperCase().trim(),
+        hoursPerWeek: Number(formData.hoursPerWeek),
+        maxSessionsPerDay: Number(formData.maxSessionsPerDay),
+      });
       toast.success('Subject added successfully');
-      setFormData({ name: '', code: '', requiresLab: false });
+      setFormData({ name: '', code: '', hoursPerWeek: 4, maxSessionsPerDay: 2, requiresLab: false });
     } catch (error) {
       toast.error('Failed to add subject');
     }
@@ -35,6 +50,8 @@ export default function Subjects() {
                   <tr>
                     <th className="px-4 py-4 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">Code</th>
                     <th className="px-4 py-4 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">Name</th>
+                    <th className="px-4 py-4 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">Hours/Week</th>
+                    <th className="px-4 py-4 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">Max/Day</th>
                     <th className="px-4 py-4 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">Requirements</th>
                     <th className="px-4 py-4 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant text-right">Actions</th>
                   </tr>
@@ -47,6 +64,12 @@ export default function Subjects() {
                       </td>
                       <td className="px-4 py-4">
                         <p className="text-sm font-semibold text-primary">{subject.name}</p>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-on-surface-variant">
+                        {subject.hoursPerWeek}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-on-surface-variant">
+                        {subject.maxSessionsPerDay}
                       </td>
                       <td className="px-4 py-4 text-sm">
                         {subject.requiresLab ? (
@@ -64,7 +87,7 @@ export default function Subjects() {
                   ))}
                   {subjects.length === 0 && (
                     <tr>
-                      <td colSpan="4" className="px-4 py-8 text-center text-on-surface-variant text-sm">No subjects found.</td>
+                      <td colSpan="6" className="px-4 py-8 text-center text-on-surface-variant text-sm">No subjects found.</td>
                     </tr>
                   )}
                 </tbody>
@@ -83,6 +106,16 @@ export default function Subjects() {
               <div>
                 <label className="block text-[10px] uppercase tracking-widest font-bold text-on-surface-variant mb-1.5">Subject Name</label>
                 <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-surface-container-lowest border-0 ring-1 ring-outline-variant/30 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:bg-white transition-all outline-none" placeholder="e.g. Advanced Calculus" type="text"/>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] uppercase tracking-widest font-bold text-on-surface-variant mb-1.5">Hours Per Week</label>
+                  <input required value={formData.hoursPerWeek} onChange={e => setFormData({...formData, hoursPerWeek: e.target.value})} className="w-full bg-surface-container-lowest border-0 ring-1 ring-outline-variant/30 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:bg-white transition-all outline-none" type="number" min="1" max="40"/>
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase tracking-widest font-bold text-on-surface-variant mb-1.5">Max Sessions / Day</label>
+                  <input required value={formData.maxSessionsPerDay} onChange={e => setFormData({...formData, maxSessionsPerDay: e.target.value})} className="w-full bg-surface-container-lowest border-0 ring-1 ring-outline-variant/30 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:bg-white transition-all outline-none" type="number" min="1" max="10"/>
+                </div>
               </div>
               <div className="flex items-center gap-2 mt-2">
                 <input id="requiresLab" type="checkbox" checked={formData.requiresLab} onChange={e => setFormData({...formData, requiresLab: e.target.checked})} className="w-4 h-4 text-primary bg-surface-container-lowest border-outline-variant/30 rounded focus:ring-primary focus:ring-2 transition-all outline-none"/>

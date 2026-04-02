@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../components/Toast';
 
 export default function Rooms() {
-  const { rooms, addRoom, deleteRoom } = useApp();
+  const { rooms, addRoom, deleteRoom, fetchRooms } = useApp();
   const toast = useToast();
   const [formData, setFormData] = useState({ name: '', capacity: 30, hasLabEquipment: false });
+
+  useEffect(() => {
+    fetchRooms();
+  }, [fetchRooms]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

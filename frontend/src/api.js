@@ -7,11 +7,13 @@ const api = axios.create({
   withCredentials: true
 });
 
-if (process.env.NODE_ENV === 'development') {
+const isDev = import.meta.env.DEV;
+
+if (isDev) {
   api.interceptors.request.use(
     (config) => {
       if (config.url !== '/auth/me') {
-        console.log(`[API] ${config.method.toUpperCase()} ${config.url}`, config.data);
+        console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`, config.data);
       }
       return config;
     },
@@ -24,7 +26,7 @@ if (process.env.NODE_ENV === 'development') {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (process.env.NODE_ENV === 'development' && error.response?.status !== 401) {
+    if (isDev && error.response?.status !== 401) {
       console.error('[API Error]', error.response?.data || error.message);
     }
     

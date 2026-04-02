@@ -75,10 +75,12 @@ export class ClassGroupController {
       const { name, studentCount } = req.body;
       const userId = req.user!.id;
 
-      if (!name || !studentCount) {
+      const normalizedStudentCount = Number(studentCount);
+
+      if (!name || !Number.isFinite(normalizedStudentCount)) {
         res.status(400).json({
           success: false,
-          error: 'Missing required fields: name, studentCount'
+          error: 'Missing or invalid required fields: name, studentCount'
         });
         return;
       }
@@ -86,7 +88,7 @@ export class ClassGroupController {
       const classGroup = new ClassGroup(
         randomUUID(),
         name,
-        studentCount
+        normalizedStudentCount
       );
 
       const created = await classGroupRepo.create(classGroup, userId);
@@ -114,6 +116,8 @@ export class ClassGroupController {
       const { name, studentCount } = req.body;
       const userId = req.user!.id;
 
+      const normalizedStudentCount = Number(studentCount);
+
       if (!id || typeof id !== 'string') {
         res.status(400).json({
           success: false,
@@ -131,7 +135,15 @@ export class ClassGroupController {
         return;
       }
 
-      const classGroup = new ClassGroup(id, name, studentCount);
+      if (!name || !Number.isFinite(normalizedStudentCount)) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing or invalid required fields: name, studentCount'
+        });
+        return;
+      }
+
+      const classGroup = new ClassGroup(id, name, normalizedStudentCount);
       const updated = await classGroupRepo.update(id, classGroup, userId);
 
       res.json({

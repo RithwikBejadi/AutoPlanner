@@ -81,11 +81,14 @@ export class SubjectController {
       const { name, code, hoursPerWeek, requiresLab, maxSessionsPerDay } = req.body;
       const userId = req.user!.id;
 
+      const normalizedHoursPerWeek = Number(hoursPerWeek);
+      const normalizedMaxSessionsPerDay = Number(maxSessionsPerDay);
+
       
-      if (!name || !code || !hoursPerWeek || maxSessionsPerDay === undefined) {
+      if (!name || !code || !Number.isFinite(normalizedHoursPerWeek) || !Number.isFinite(normalizedMaxSessionsPerDay)) {
         res.status(400).json({
           success: false,
-          error: 'Missing required fields: name, code, hoursPerWeek, maxSessionsPerDay'
+          error: 'Missing or invalid required fields: name, code, hoursPerWeek, maxSessionsPerDay'
         });
         return;
       }
@@ -95,9 +98,9 @@ export class SubjectController {
         randomUUID(),
         name,
         code,
-        hoursPerWeek,
+        normalizedHoursPerWeek,
         requiresLab || false,
-        maxSessionsPerDay
+        normalizedMaxSessionsPerDay
       );
 
       const created = await subjectRepo.create(subject, userId);
@@ -128,6 +131,9 @@ export class SubjectController {
       const { name, code, hoursPerWeek, requiresLab, maxSessionsPerDay } = req.body;
       const userId = req.user!.id;
 
+      const normalizedHoursPerWeek = Number(hoursPerWeek);
+      const normalizedMaxSessionsPerDay = Number(maxSessionsPerDay);
+
       if (!id || typeof id !== 'string') {
         res.status(400).json({
           success: false,
@@ -145,7 +151,15 @@ export class SubjectController {
         return;
       }
 
-      const subject = new Subject(id, name, code, hoursPerWeek, requiresLab, maxSessionsPerDay);
+      if (!name || !code || !Number.isFinite(normalizedHoursPerWeek) || !Number.isFinite(normalizedMaxSessionsPerDay)) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing or invalid required fields: name, code, hoursPerWeek, maxSessionsPerDay'
+        });
+        return;
+      }
+
+      const subject = new Subject(id, name, code, normalizedHoursPerWeek, Boolean(requiresLab), normalizedMaxSessionsPerDay);
       const updated = await subjectRepo.update(id, subject, userId);
 
       res.json({

@@ -4,6 +4,7 @@ import { TeacherConflictConstraint } from '../constraints/TeacherConflictConstra
 import { RoomCapacityConstraint } from '../constraints/RoomCapacityConstraint.js';
 import { RoomConflictConstraint } from '../constraints/RoomConflictConstraint.js';
 import { ClassConflictConstraint } from '../constraints/ClassConflictConstraint.js';
+import { SubjectDailyLimitConstraint } from '../constraints/SubjectDailyLimitConstraint.js';
 
 export interface ValidationResult {
   readonly valid: boolean;
@@ -18,6 +19,7 @@ export class ConstraintValidator {
     
     this.constraints = [
       new TeacherAvailabilityConstraint(), 
+      new SubjectDailyLimitConstraint(),
       new TeacherConflictConstraint(),
       new RoomCapacityConstraint(),
       new RoomConflictConstraint(),
