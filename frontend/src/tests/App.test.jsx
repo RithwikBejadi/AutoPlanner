@@ -4,7 +4,6 @@ import App from '../App';
 
 describe('App Component', () => {
   it('renders loading or dashboard', () => {
-    // Basic test to ensure structure
     expect(true).toBe(true);
   });
 });

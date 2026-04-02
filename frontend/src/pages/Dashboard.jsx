@@ -1,236 +1,188 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../components/Toast';
-import { Button, LoadingSkeleton } from '../components/ui';
-import { handleApiError } from '../utils/errorHandling';
-
-const statCards = [
-  { key: 'teachers', label: 'Teachers', icon: 'school', to: '/teachers', color: 'from-primary to-primary-dim' },
-  { key: 'rooms', label: 'Rooms', icon: 'meeting_room', to: '/rooms', color: 'from-secondary to-cyan-400' },
-  { key: 'subjects', label: 'Subjects', icon: 'menu_book', to: '/subjects', color: 'from-tertiary to-violet-400' },
-  { key: 'classGroups', label: 'Class Groups', icon: 'groups', to: '/class-groups', color: 'from-primary to-indigo-400' },
-  { key: 'timeSlots', label: 'Time Slots', icon: 'schedule', to: '/timeslots', color: 'from-secondary to-teal-400' },
-  { key: 'schedule', label: 'Scheduled Sessions', icon: 'calendar_view_week', to: '/timetable', color: 'from-tertiary to-purple-400' },
-];
-
-function StatCard({ label, value, icon, to, color, loading }) {
-  return (
-    <Link to={to} className="card card-hover group relative overflow-hidden cursor-pointer">
-      <div className={`absolute -right-4 -bottom-4 w-20 h-20 rounded-full bg-gradient-to-br ${color} opacity-[0.06] group-hover:opacity-[0.12] transition-opacity`} />
-      <div className="flex items-start justify-between mb-4">
-        <span className={`material-symbols-outlined bg-gradient-to-br ${color} bg-clip-text text-transparent`} style={{fontSize: 22, fontVariationSettings: "'FILL' 1"}}>
-          {icon}
-        </span>
-        <span className="material-symbols-outlined text-outline opacity-0 group-hover:opacity-100 transition-opacity" style={{fontSize: 14}}>arrow_outward</span>
-      </div>
-      <div>
-        {loading ? (
-          <LoadingSkeleton variant="title" className="w-16 mb-1" />
-        ) : (
-          <p className="stat-number">{value}</p>
-        )}
-        <p className="label-tiny mt-1">{label}</p>
-      </div>
-    </Link>
-  );
-}
+import * as api from '../api';
 
 export default function Dashboard() {
-  const { 
-    teachers, rooms, subjects, classGroups, timeSlots, schedule,
-    fetchTeachers, fetchRooms, fetchSubjects, fetchClassGroups, fetchTimeSlots, fetchSchedule,
-    generateSchedule, loading
-  } = useApp();
+  const { teachers, rooms, subjects, classGroups, fetchTeachers, fetchRooms, fetchSubjects, fetchClassGroups, loading } = useApp();
+  const [timetables, setTimetables] = useState([]);
+  const [loadingTimetables, setLoadingTimetables] = useState(false);
   const toast = useToast();
-  const [generating, setGenerating] = useState(false);
-  const [result, setResult] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchTeachers();
     fetchRooms();
     fetchSubjects();
     fetchClassGroups();
-    fetchTimeSlots();
-    fetchSchedule();
-  }, [fetchTeachers, fetchRooms, fetchSubjects, fetchClassGroups, fetchTimeSlots, fetchSchedule]);
+    
+    setLoadingTimetables(true);
+    api.getTimetables()
+      .then(setTimetables)
+      .catch(err => {
+        if (err.response?.status !== 404 && err.response?.status !== 401) {
+          toast.error('Failed to load recent timetables');
+        }
+      })
+      .finally(() => setLoadingTimetables(false));
+  }, [fetchTeachers, fetchRooms, fetchSubjects, fetchClassGroups]);
 
-  const handleGenerate = async () => {
-    setGenerating(true);
-    setResult(null);
+  const isLoading = Object.values(loading).some(v => v) || loadingTimetables;
+
+  const handleDeleteTimetable = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this timetable?')) return;
     try {
-      const genResult = await generateSchedule();
-      setResult(genResult);
-      toast.success('Schedule generated successfully!');
-    } catch (error) {
-      handleApiError(error, toast);
-    } finally {
-      setGenerating(false);
+      await api.deleteTimetable(id);
+      setTimetables(prev => prev.filter(t => t.id !== id));
+      toast.success('Timetable deleted successfully');
+    } catch (e) {
+      toast.error('Failed to delete timetable');
     }
   };
 
-  const stats = {
-    teachers: teachers.length,
-    rooms: rooms.length,
-    subjects: subjects.length,
-    classGroups: classGroups.length,
-    timeSlots: timeSlots.length,
-    schedule: schedule.length,
-  };
-
-  const isLoading = loading.teachers || loading.rooms || loading.subjects || 
-                    loading.classGroups || loading.timeSlots || loading.schedule;
-
-  const roomUtil = stats.rooms > 0 && stats.schedule > 0 
-    ? Math.min(100, Math.round((stats.schedule / (stats.rooms * stats.timeSlots)) * 100)) 
-    : 0;
-  const teacherCov = stats.teachers > 0 && stats.schedule > 0
-    ? Math.min(100, Math.round((stats.schedule / (stats.teachers * stats.timeSlots)) * 100))
-    : 0;
-  const density = stats.timeSlots > 0 && stats.schedule > 0
-    ? Math.min(100, Math.round((stats.schedule / stats.timeSlots) * 100))
-    : 0;
-
   return (
-    <div className="space-y-8 max-w-7xl">
-      <div>
-        <h1 className="section-title">Command Center</h1>
-        <p className="section-sub">Smart timetable generator dashboard</p>
+    <div className="max-w-screen-2xl mx-auto min-h-full animate-fade-in pb-12">
+      <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+        <div className="space-y-1">
+          <span className="text-[0.6875rem] font-bold uppercase tracking-widest text-secondary font-label">Overview</span>
+          <h1 className="text-4xl font-headline tracking-tight text-primary">Dashboard</h1>
+          <p className="text-on-surface-variant text-sm max-w-md mt-2">Manage your institutional assets and generate optimized schedules in seconds.</p>
+        </div>
+        <Link to="/timetable/generate" className="bg-primary text-on-primary-fixed px-5 py-2.5 rounded-lg font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-all text-sm w-fit">
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
+          Generate New Timetable
+        </Link>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        {statCards.map(card => (
-          <StatCard
-            key={card.key}
-            label={card.label}
-            value={stats[card.key]}
-            icon={card.icon}
-            to={card.to}
-            color={card.color}
-            loading={isLoading}
-          />
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-              <span className="material-symbols-outlined text-on-primary-fixed" style={{fontSize: 20}}>auto_awesome</span>
-            </div>
-            <div>
-              <h2 className="font-headline font-bold text-base text-on-surface">Optimizer Engine</h2>
-              <p className="text-xs text-on-surface-variant">Generate constraint-based schedule</p>
-            </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+        <div className="bg-surface-container-lowest border border-outline-variant/20 p-6 rounded-xl hover:border-primary/50 transition-colors">
+          <div className="flex justify-between items-start mb-4">
+            <span className="text-on-surface-variant font-medium text-sm">Teachers</span>
+            <span className="material-symbols-outlined text-outline">person</span>
           </div>
+          <div className="text-3xl font-headline text-primary">{isLoading ? '...' : teachers.length}</div>
+          <div className="mt-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-secondary">
+            <span>Active Now</span>
+          </div>
+        </div>
 
-          <Button
-            variant="primary"
-            icon="play_arrow"
-            onClick={handleGenerate}
-            loading={generating}
-            disabled={stats.teachers === 0 || stats.rooms === 0 || stats.subjects === 0 || stats.classGroups === 0 || stats.timeSlots === 0}
-            className="w-full"
-          >
-            {generating ? 'Generating Schedule...' : 'Generate Timetable'}
-          </Button>
+        <div className="bg-surface-container-lowest border border-outline-variant/20 p-6 rounded-xl hover:border-primary/50 transition-colors">
+          <div className="flex justify-between items-start mb-4">
+            <span className="text-on-surface-variant font-medium text-sm">Rooms</span>
+            <span className="material-symbols-outlined text-outline">meeting_room</span>
+          </div>
+          <div className="text-3xl font-headline text-primary">{isLoading ? '...' : rooms.length}</div>
+          <div className="mt-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
+            <span>{rooms.filter(r => r.hasLabEquipment)?.length || 0} Specialized Labs</span>
+          </div>
+        </div>
 
-          {result && (
-            <div className="mt-6 space-y-4">
-              <div className="flex items-center justify-between p-4 rounded-xl bg-surface-container-high border border-outline-variant/10">
-                <div>
-                  <p className="text-xs text-outline mb-1">Status</p>
-                  <p className="font-semibold text-on-surface">{result.message}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-outline mb-1">Assigned</p>
-                  <p className="text-2xl font-bold text-success">{result.totalAssigned}</p>
-                </div>
-              </div>
+        <div className="bg-surface-container-lowest border border-outline-variant/20 p-6 rounded-xl hover:border-primary/50 transition-colors">
+          <div className="flex justify-between items-start mb-4">
+            <span className="text-on-surface-variant font-medium text-sm">Subjects</span>
+            <span className="material-symbols-outlined text-outline">book</span>
+          </div>
+          <div className="text-3xl font-headline text-primary">{isLoading ? '...' : subjects.length}</div>
+          <div className="mt-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
+            <span>{subjects.filter(s => s.requiresLab)?.length || 0} Requiring Labs</span>
+          </div>
+        </div>
 
-              {result.totalUnassigned > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-error text-xs font-semibold">
-                    <span className="material-symbols-outlined" style={{fontSize: 14}}>warning</span>
-                    {result.totalUnassigned} sessions unscheduled
-                  </div>
-                  <div className="max-h-40 overflow-y-auto custom-scrollbar space-y-2">
-                    {result.unassigned?.map((u, i) => (
-                      <div key={i} className="text-xs p-2 rounded-lg bg-error/5 border border-error/10 text-outline">
-                        {u.classGroup} - {u.subject}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+        <div className="bg-surface-container-lowest border border-outline-variant/20 p-6 rounded-xl hover:border-primary/50 transition-colors">
+          <div className="flex justify-between items-start mb-4">
+            <span className="text-on-surface-variant font-medium text-sm">Classes</span>
+            <span className="material-symbols-outlined text-outline">groups</span>
+          </div>
+          <div className="text-3xl font-headline text-primary">{isLoading ? '...' : classGroups.length}</div>
+          <div className="mt-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
+            <span>{classGroups.reduce((sum, c) => sum + (c.studentCount || 0), 0)} Total Students</span>
+          </div>
+        </div>
+      </div>
+
+      
+      <section className="space-y-6">
+        <div className="flex items-center justify-between border-b border-outline-variant/20 pb-4">
+          <h2 className="text-xl font-headline text-primary">Recent Generations</h2>
+          <Link to="/timetable" className="text-xs font-bold uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors">View Current</Link>
+        </div>
+        
+        <div className="overflow-x-auto">
+          {timetables.length === 0 ? (
+            <div className="text-center text-on-surface-variant py-8">
+              {loadingTimetables ? 'Loading...' : 'No timetables generated yet. Generate your first one today!'}
             </div>
+          ) : (
+            <table className="w-full text-left border-separate border-spacing-y-2">
+              <thead>
+                <tr className="text-[0.6875rem] font-bold uppercase tracking-widest text-on-surface-variant">
+                  <th className="px-4 md:px-6 py-3 font-medium">Timetable Name</th>
+                  <th className="px-4 md:px-6 py-3 font-medium">Date Generated</th>
+                  <th className="px-4 md:px-6 py-3 font-medium">Status / Entries</th>
+                  <th className="px-4 md:px-6 py-3 font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {timetables.map((t, index) => (
+                  <tr key={t.id} className="bg-white hover:bg-surface-container-low transition-colors group rounded-xl">
+                    <td className="px-4 md:px-6 py-4 font-semibold text-primary rounded-l-lg truncate max-w-xs" title={"Timetable ID: " + t.id}>
+                      {index === 0 ? 'Latest Generation' : `Archive #${timetables.length - index}`}
+                    </td>
+                    <td className="px-4 md:px-6 py-4 text-on-surface-variant">
+                      {new Date(t.createdAt).toLocaleDateString(undefined, {
+                        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                      })}
+                    </td>
+                    <td className="px-4 md:px-6 py-4">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${index === 0 ? 'bg-secondary/10 text-secondary' : 'bg-surface-container-highest text-on-surface-variant'}`}>
+                        <span className={`w-1 h-1 rounded-full ${index === 0 ? 'bg-secondary' : 'bg-on-surface-variant'}`}></span>
+                        {index === 0 ? 'Active' : 'Archived'}
+                        <span className="ml-1 text-[9px] uppercase font-bold text-on-surface-variant opacity-70">({t.entryCount} Entries)</span>
+                      </span>
+                    </td>
+                    <td className="px-4 md:px-6 py-4 text-right rounded-r-lg flex justify-end gap-1">
+                      {index === 0 && (
+                        <Link to="/timetable" title="View Current" className="p-2 hover:bg-surface-container-high rounded transition-colors text-outline group-hover:text-primary inline-flex">
+                          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>visibility</span>
+                        </Link>
+                      )}
+                      <button onClick={() => handleDeleteTimetable(t.id)} title="Delete Generation" className="p-2 hover:bg-error/10 hover:text-error rounded transition-colors text-outline inline-flex" disabled={loadingTimetables}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 20 }}>delete</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
+      </section>
 
-        <div className="card">
-          <h2 className="font-headline font-bold text-base text-on-surface mb-6">System Status</h2>
-          <div className="space-y-6">
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-outline">Room Utilization</span>
-                <span className="font-bold text-on-surface">{roomUtil}%</span>
-              </div>
-              <div className="h-2 w-full bg-surface-container-high rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-secondary to-primary rounded-full transition-all" style={{width: `${roomUtil}%`}} />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-outline">Teacher Coverage</span>
-                <span className="font-bold text-on-surface">{teacherCov}%</span>
-              </div>
-              <div className="h-2 w-full bg-surface-container-high rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-tertiary to-secondary rounded-full transition-all" style={{width: `${teacherCov}%`}} />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-outline">Schedule Density</span>
-                <span className="font-bold text-on-surface">{density}%</span>
-              </div>
-              <div className="h-2 w-full bg-surface-container-high rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-primary to-tertiary rounded-full transition-all" style={{width: `${density}%`}} />
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-outline-variant/10 grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-[10px] text-outline mb-1">DATA ENTITIES</p>
-                <p className="text-xl font-bold text-on-surface">{stats.teachers + stats.rooms + stats.subjects + stats.classGroups}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-outline mb-1">WEEKLY SLOTS</p>
-                <p className="text-xl font-bold text-on-surface">{stats.timeSlots}</p>
-              </div>
-            </div>
+      {/* Dynamic Resource Highlights */}
+      <section className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Link to="/teachers" className="relative group block p-6 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl hover:border-primary/50 transition-all overflow-hidden h-32 flex flex-col justify-center">
+          <div className="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 group-hover:rotate-12 group-hover:opacity-10 transition-all duration-500">
+            <span className="material-symbols-outlined text-9xl">person</span>
           </div>
-        </div>
-      </div>
-
-      <div className="card">
-        <h2 className="font-headline font-bold text-base text-on-surface mb-4">Quick Navigation</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {statCards.map(card => (
-            <Link
-              key={card.key}
-              to={card.to}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/10 hover:border-primary/20 transition-all group"
-            >
-              <span className={`material-symbols-outlined bg-gradient-to-br ${card.color} bg-clip-text text-transparent`} style={{fontSize: 24}}>
-                {card.icon}
-              </span>
-              <span className="text-xs text-outline group-hover:text-on-surface transition-colors text-center">{card.label}</span>
-            </Link>
-          ))}
-        </div>
-      </div>
-    </div>
+          <span className="text-[0.6875rem] font-bold uppercase tracking-widest text-primary mb-1 relative z-10">Manage Staff</span>
+          <h3 className="text-xl font-headline text-on-surface relative z-10">Teachers & Assignments</h3>
+        </Link>
+        <Link to="/subjects" className="relative group block p-6 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl hover:border-primary/50 transition-all overflow-hidden h-32 flex flex-col justify-center">
+          <div className="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 group-hover:-rotate-12 group-hover:opacity-10 transition-all duration-500">
+            <span className="material-symbols-outlined text-9xl">menu_book</span>
+          </div>
+          <span className="text-[0.6875rem] font-bold uppercase tracking-widest text-primary mb-1 relative z-10">Curriculum</span>
+          <h3 className="text-xl font-headline text-on-surface relative z-10">Courses & Labs</h3>
+        </Link>
+        <Link to="/rooms" className="relative group block p-6 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl hover:border-primary/50 transition-all overflow-hidden h-32 flex flex-col justify-center">
+          <div className="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 group-hover:rotate-12 group-hover:opacity-10 transition-all duration-500">
+            <span className="material-symbols-outlined text-9xl">meeting_room</span>
+          </div>
+          <span className="text-[0.6875rem] font-bold uppercase tracking-widest text-primary mb-1 relative z-10">Facilities</span>
+          <h3 className="text-xl font-headline text-on-surface relative z-10">Rooms & Capacities</h3>
+        </Link>
+      </section>
+</div>
   );
 }

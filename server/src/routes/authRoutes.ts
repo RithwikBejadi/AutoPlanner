@@ -3,7 +3,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { PrismaUserRepository } from '../repositories/index.js';
 import { PrismaClient } from '@prisma/client';
 import { signToken, getCookieOptions } from '../utils/auth.js';
-import { authenticate, type AuthRequest } from '../middleware/auth.js';
+import { authenticate, optionalAuth, type AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -90,18 +90,16 @@ router.get('/google/callback', async (req: AuthRequest, res: Response) => {
     res.redirect(`${frontendUrl}/dashboard`);
   } catch (error) {
     console.error('OAuth callback error:', error);
+    import('fs').then(fs => fs.appendFileSync('auth-error.log', '\n' + new Date().toISOString() + ': ' + (error instanceof Error ? error.stack : String(error))));
     const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:3000';
     res.redirect(`${frontendUrl}/login?error=auth_failed`);
   }
 });
 
-router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
+router.get('/me', optionalAuth, async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        message: 'User not authenticated'
-      });
+      return res.status(200).json(null);
     }
 
     const user = await userRepository.findById(req.user.id);

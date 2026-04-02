@@ -7,6 +7,10 @@ export { default as Checkbox } from './Checkbox';
 export { default as Toggle } from './Toggle';
 export { default as Card } from './Card';
 export { default as ConfirmDialog } from './ConfirmDialog';
+export { default as Header } from './Header';
+export { default as Footer } from './Footer';
+export { default as AuthHeader } from './AuthHeader';
+export { default as ThemeToggle } from './ThemeToggle';
 export {
   LoadingSpinner,
   LoadingSkeleton,

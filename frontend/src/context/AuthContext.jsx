@@ -13,12 +13,21 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       const userData = await api.getCurrentUser();
+      
+      if (!userData && window.location.pathname !== '/login') {
+        window.location.href = '/login';
+        return;
+      }
+      
       setUser(userData);
     } catch (err) {
       if (err.response?.status !== 401) {
         setError(err.message);
       }
       setUser(null);
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     } finally {
       setLoading(false);
     }

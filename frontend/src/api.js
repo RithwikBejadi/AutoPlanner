@@ -10,7 +10,9 @@ const api = axios.create({
 if (process.env.NODE_ENV === 'development') {
   api.interceptors.request.use(
     (config) => {
-      console.log(`[API] ${config.method.toUpperCase()} ${config.url}`, config.data);
+      if (config.url !== '/auth/me') {
+        console.log(`[API] ${config.method.toUpperCase()} ${config.url}`, config.data);
+      }
       return config;
     },
     (error) => {
@@ -22,7 +24,7 @@ if (process.env.NODE_ENV === 'development') {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'development' && error.response?.status !== 401) {
       console.error('[API Error]', error.response?.data || error.message);
     }
     
@@ -76,6 +78,8 @@ export const getTimeslots = getTimeSlots;
 export const createTimeslot = createTimeSlot;
 export const deleteTimeslot = deleteTimeSlot;
 
+export const getTimetables = () => api.get('/timetables').then(r => r.data.data);
+export const deleteTimetable = (id) => api.delete(`/timetables/${id}`).then(r => r.data);
 
 export const getSchedule = async () => {
   try {
@@ -113,10 +117,11 @@ export const getScheduleByRoom = async (id) => {
   } catch (e) { return []; }
 };
 
-export const generateSchedule = async () => {
-  const r = await api.post('/timetables/generate');
+export const generateSchedule = async (config = {}) => {
+  const r = await api.post('/timetables/generate', {}, config);
   const d = r.data.data;
   return {
+    data: d,
     message: r.data.message,
     totalAssigned: d.stats?.scheduledCount || 0,
     totalUnassigned: d.stats?.unscheduledCount || 0,

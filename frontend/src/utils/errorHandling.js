@@ -4,7 +4,6 @@ export function getErrorMessage(error) {
   }
   
   if (error.response) {
-    // Axios error with response
     const data = error.response.data;
     
     if (data.message) {
@@ -15,7 +14,6 @@ export function getErrorMessage(error) {
       return data.error;
     }
     
-    // HTTP status messages
     const statusMessages = {
       400: 'Invalid request. Please check your input.',
       401: 'Unauthorized. Please log in again.',
@@ -34,7 +32,6 @@ export function getErrorMessage(error) {
   }
   
   if (error.request) {
-    // Network error
     return 'Network error. Please check your connection and try again.';
   }
   

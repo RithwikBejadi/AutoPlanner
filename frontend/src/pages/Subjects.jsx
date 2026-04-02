@@ -1,218 +1,100 @@
-import React, { useEffect, useState } from 'react';
-import { useSubjects } from '../hooks';
+import React, { useState } from 'react';
+import { useApp } from '../context/AppContext';
 import { useToast } from '../components/Toast';
-import { useFormValidation } from '../hooks/useFormValidation';
-import { subjectSchema } from '../schemas/validationSchemas';
-import { FormInput, FormToggle } from '../components/forms/FormFields';
-import { Button, Modal, ConfirmDialog, LoadingSkeleton } from '../components/ui';
-import { handleApiError } from '../utils/errorHandling';
-
-const HOUR_COLORS = [
-  'bg-primary/20 border-primary/30 text-primary',
-  'bg-secondary/20 border-secondary/30 text-secondary',
-  'bg-tertiary/20 border-tertiary/30 text-tertiary',
-  'bg-violet-400/20 border-violet-400/30 text-violet-300',
-  'bg-cyan-400/20 border-cyan-400/30 text-cyan-300',
-];
-
-function HoursBar({ hours }) {
-  const maxH = 10;
-  const pct = Math.min(100, (hours / maxH) * 100);
-  const color = hours >= 6 ? 'bg-error' : hours >= 4 ? 'bg-tertiary' : 'bg-secondary';
-  return (
-    <div>
-      <div className="flex justify-between mb-1">
-        <span className="text-[10px] text-outline">Hours / Week</span>
-        <span className="text-[10px] font-bold text-on-surface">{hours}h</span>
-      </div>
-      <div className="h-1 w-full bg-surface-container-high rounded-full overflow-hidden">
-        <div className={`h-full ${color} rounded-full`} style={{width: `${pct}%`}} />
-      </div>
-    </div>
-  );
-}
-
-function SubjectCard({ subject, onEdit, onDelete }) {
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const colorIdx = subject.name.charCodeAt(0) % HOUR_COLORS.length;
-  const colorClass = HOUR_COLORS[colorIdx];
-
-  const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      await onDelete(subject.id);
-      setDeleteDialogOpen(false);
-    } catch (error) {
-      setDeleting(false);
-    }
-  };
-
-  return (
-    <>
-      <div className="card card-hover animate-fade-in">
-        <div className="flex items-start justify-between mb-4">
-          <span className={`badge border font-mono text-xs ${colorClass}`}>{subject.code}</span>
-          <div className="flex gap-2">
-            <button onClick={() => onEdit(subject)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-primary/10 text-outline hover:text-primary transition-colors" aria-label="Edit subject">
-              <span className="material-symbols-outlined" style={{fontSize: 16}}>edit</span>
-            </button>
-            <button onClick={() => setDeleteDialogOpen(true)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-error/10 text-outline hover:text-error transition-colors" aria-label="Delete subject">
-              <span className="material-symbols-outlined" style={{fontSize: 16}}>delete</span>
-            </button>
-          </div>
-        </div>
-        <h3 className="font-semibold text-on-surface text-sm font-headline leading-snug mb-4">{subject.name}</h3>
-        <div className="space-y-3">
-          <HoursBar hours={subject.hoursPerWeek} />
-          <div className="flex gap-2 flex-wrap">
-            {subject.requiresLab && (
-              <span className="badge bg-tertiary/10 text-tertiary border border-tertiary/20">Lab Required</span>
-            )}
-            <span className="badge bg-surface-container-high text-outline border border-outline-variant/20">Max {subject.maxSessionsPerDay}/day</span>
-          </div>
-        </div>
-      </div>
-      <ConfirmDialog isOpen={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} onConfirm={handleDelete} title="Delete Subject" message={`Are you sure you want to delete ${subject.name}? This action cannot be undone.`} confirmText="Delete" variant="danger" loading={deleting} />
-    </>
-  );
-}
-
-function SubjectFormModal({ isOpen, onClose, subject, onSuccess }) {
-  const { addSubject, updateSubject } = useSubjects();
-  const toast = useToast();
-  const isEdit = !!subject;
-
-  const { control, handleSubmit, formState: { isSubmitting }, reset } = useFormValidation(
-    subjectSchema,
-    subject || { name: '', code: '', hoursPerWeek: 4, requiresLab: false, maxSessionsPerDay: 2 }
-  );
-
-  useEffect(() => {
-    if (isOpen) {
-      reset(subject || { name: '', code: '', hoursPerWeek: 4, requiresLab: false, maxSessionsPerDay: 2 });
-    }
-  }, [isOpen, subject, reset]);
-
-  const onSubmit = async (data) => {
-    try {
-      if (isEdit) {
-        await updateSubject(subject.id, data);
-        toast.success(`${data.name} updated successfully`);
-      } else {
-        await addSubject(data);
-        toast.success(`${data.name} added successfully`);
-      }
-      onSuccess();
-      onClose();
-    } catch (error) {
-      handleApiError(error, toast);
-    }
-  };
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? 'Edit Subject' : 'Add New Subject'} size="md">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <FormInput name="name" control={control} label="Subject Name" placeholder="e.g. Advanced Mathematics" required icon="book" />
-        <FormInput name="code" control={control} label="Subject Code" placeholder="e.g. MATH-401" required icon="tag" hint="Uppercase letters, numbers, and hyphens only" />
-        <div className="grid grid-cols-2 gap-4">
-          <FormInput name="hoursPerWeek" control={control} label="Hours per Week" type="number" placeholder="e.g. 4" required icon="schedule" />
-          <FormInput name="maxSessionsPerDay" control={control} label="Max Sessions/Day" type="number" placeholder="e.g. 2" required icon="event" />
-        </div>
-        <FormToggle name="requiresLab" control={control} label="Requires Lab Equipment" description="This subject needs rooms with lab facilities" />
-        <div className="flex gap-3 pt-4">
-          <Button type="submit" variant="primary" loading={isSubmitting} icon={isEdit ? 'check' : 'add'}>{isEdit ? 'Update Subject' : 'Add Subject'}</Button>
-          <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
 
 export default function Subjects() {
-  const { subjects, loading, fetchSubjects, deleteSubject } = useSubjects();
+  const { subjects, addSubject, deleteSubject } = useApp();
   const toast = useToast();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingSubject, setEditingSubject] = useState(null);
+  const [formData, setFormData] = useState({ name: '', code: '', requiresLab: false });
 
-  useEffect(() => {
-    fetchSubjects();
-  }, [fetchSubjects]);
-
-  const handleEdit = (subject) => {
-    setEditingSubject(subject);
-    setModalOpen(true);
-  };
-
-  const handleAdd = () => {
-    setEditingSubject(null);
-    setModalOpen(true);
-  };
-
-  const handleDelete = async (id) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     try {
-      await deleteSubject(id);
-      toast.success('Subject deleted successfully');
+      await addSubject(formData);
+      toast.success('Subject added successfully');
+      setFormData({ name: '', code: '', requiresLab: false });
     } catch (error) {
-      handleApiError(error, toast);
-      throw error;
+      toast.error('Failed to add subject');
     }
   };
 
-  const handleModalClose = () => {
-    setModalOpen(false);
-    setEditingSubject(null);
-  };
-
-  const filteredSubjects = subjects.filter(subject =>
-    subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    subject.code.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   return (
-    <div className="space-y-8 max-w-7xl">
-      <div className="flex items-start justify-between gap-4">
+    <div className="flex-1 bg-surface-container-lowest p-8 overflow-y-auto min-h-[calc(100vh-64px)] animate-fade-in">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
         <div>
-          <h1 className="section-title">Subjects</h1>
-          <p className="section-sub">{subjects.length} subjects in curriculum</p>
+          <h1 className="text-3xl font-headline text-primary tracking-tight">Subjects</h1>
+          <p className="text-on-surface-variant text-sm mt-1">Manage curricular subjects and their lab requirements.</p>
         </div>
-        <Button variant="primary" icon="add_circle" onClick={handleAdd}>Add Subject</Button>
       </div>
-
-      {subjects.length > 0 && (
-        <div className="relative">
-          <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline" style={{ fontSize: 18 }}>search</span>
-          <input type="text" placeholder="Search subjects by name or code..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="input-dark pl-12 w-full max-w-md" />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface">
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
-            </button>
-          )}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
+          <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-surface-container-low border-b border-outline-variant/30">
+                  <tr>
+                    <th className="px-4 py-4 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">Code</th>
+                    <th className="px-4 py-4 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">Name</th>
+                    <th className="px-4 py-4 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">Requirements</th>
+                    <th className="px-4 py-4 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-outline-variant/20">
+                  {subjects.map(subject => (
+                    <tr key={subject.id} className="hover:bg-surface-container-low transition-colors group">
+                      <td className="px-4 py-4">
+                        <span className="text-xs bg-surface-container-high px-2 py-1 rounded text-primary font-bold tracking-widest uppercase">{subject.code}</span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <p className="text-sm font-semibold text-primary">{subject.name}</p>
+                      </td>
+                      <td className="px-4 py-4 text-sm">
+                        {subject.requiresLab ? (
+                          <span className="text-xs bg-secondary-container text-on-secondary-container px-2 py-1 rounded font-medium">Requires Lab</span>
+                        ) : (
+                          <span className="text-xs bg-surface-container-high text-on-surface-variant px-2 py-1 rounded font-medium">Standard</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 text-right">
+                        <button onClick={() => deleteSubject(subject.id)} className="p-1 hover:bg-surface-container-highest rounded transition-colors text-on-surface-variant group-hover:text-primary">
+                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {subjects.length === 0 && (
+                    <tr>
+                      <td colSpan="4" className="px-4 py-8 text-center text-on-surface-variant text-sm">No subjects found.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-      )}
-
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="card animate-pulse"><div className="space-y-3"><LoadingSkeleton variant="title" className="w-1/4" /><LoadingSkeleton variant="title" className="w-3/4" /><LoadingSkeleton className="w-full" /><LoadingSkeleton className="w-1/2" /></div></div>
-          ))}
+        <div className="space-y-6">
+          <div className="bg-surface-container-low border border-outline-variant/30 rounded-xl p-6">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-primary mb-6">Quick Register</h2>
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest font-bold text-on-surface-variant mb-1.5">Subject Code</label>
+                <input required value={formData.code} onChange={e => setFormData({...formData, code: e.target.value})} className="w-full bg-surface-container-lowest border-0 ring-1 ring-outline-variant/30 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:bg-white transition-all outline-none uppercase" placeholder="e.g. MATH101" type="text"/>
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest font-bold text-on-surface-variant mb-1.5">Subject Name</label>
+                <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-surface-container-lowest border-0 ring-1 ring-outline-variant/30 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:bg-white transition-all outline-none" placeholder="e.g. Advanced Calculus" type="text"/>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <input id="requiresLab" type="checkbox" checked={formData.requiresLab} onChange={e => setFormData({...formData, requiresLab: e.target.checked})} className="w-4 h-4 text-primary bg-surface-container-lowest border-outline-variant/30 rounded focus:ring-primary focus:ring-2 transition-all outline-none"/>
+                <label htmlFor="requiresLab" className="text-sm font-medium text-on-surface-variant">Requires Lab Room?</label>
+              </div>
+              <div className="pt-4">
+                <button type="submit" className="w-full bg-primary text-on-primary font-bold py-3 rounded-lg text-sm hover:opacity-90 active:scale-[0.98] transition-all">Save Entity</button>
+              </div>
+            </form>
+          </div>
         </div>
-      ) : filteredSubjects.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-16 text-center">
-          <span className="material-symbols-outlined text-outline mb-4" style={{fontSize: 48}}>{searchQuery ? 'search_off' : 'book'}</span>
-          <p className="font-semibold text-on-surface-variant">{searchQuery ? 'No subjects found' : 'No subjects yet'}</p>
-          <p className="text-sm text-outline mt-1">{searchQuery ? 'Try a different search term' : 'Click "Add Subject" to get started'}</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredSubjects.map(s => (
-            <SubjectCard key={s.id} subject={s} onEdit={handleEdit} onDelete={handleDelete} />
-          ))}
-        </div>
-      )}
-
-      <SubjectFormModal isOpen={modalOpen} onClose={handleModalClose} subject={editingSubject} onSuccess={fetchSubjects} />
+      </div>
     </div>
   );
 }

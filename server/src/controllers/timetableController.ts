@@ -50,6 +50,29 @@ function serializeEntry(entry: {
 
 
 export class TimetableController {
+  async getAll(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized', message: 'User not authenticated' });
+      }
+
+      const timetables = await timetableRepo.findAllByUserId(userId);
+      const data = timetables.map(t => ({
+        id: t.getId(),
+        createdAt: t.getCreatedAt(),
+        updatedAt: t.getUpdatedAt(),
+        entryCount: t.getEntries().length,
+      }));
+
+      return res.json({
+        data: data.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime())
+      });
+    } catch (error) {
+      console.error('Failed to fetch timetables', error);
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
+  }
 
     async generate(req: AuthRequest, res: Response): Promise<void> {
     try {
