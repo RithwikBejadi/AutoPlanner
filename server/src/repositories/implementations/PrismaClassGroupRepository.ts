@@ -22,8 +22,11 @@ export class PrismaClassGroupRepository implements IClassGroupRepository {
     };
   }
 
-  async create(classGroup: ClassGroup): Promise<ClassGroup> {
-    const data = this.toPrismaData(classGroup);
+  async create(classGroup: ClassGroup, userId: string): Promise<ClassGroup> {
+    const data = {
+      ...this.toPrismaData(classGroup),
+      userId,
+    };
     const created = await prisma.classGroup.create({ data });
     return this.toDomain(created);
   }
@@ -44,6 +47,25 @@ export class PrismaClassGroupRepository implements IClassGroupRepository {
       orderBy: { name: 'asc' }
     });
     return classGroups.map(cg => this.toDomain(cg));
+  }
+
+  async findAllByUserId(userId: string): Promise<ClassGroup[]> {
+    const classGroups = await prisma.classGroup.findMany({
+      where: { userId },
+      orderBy: { name: 'asc' }
+    });
+    return classGroups.map(cg => this.toDomain(cg));
+  }
+
+  async findByIdAndUserId(id: string, userId: string): Promise<ClassGroup | null> {
+    if (!id || typeof id !== 'string') {
+      throw new Error('Invalid classGroup ID');
+    }
+    
+    const found = await prisma.classGroup.findFirst({
+      where: { id, userId },
+    });
+    return found ? this.toDomain(found) : null;
   }
 
   async findByName(name: string): Promise<ClassGroup | null> {
@@ -77,14 +99,14 @@ export class PrismaClassGroupRepository implements IClassGroupRepository {
     return classGroups.map(cg => this.toDomain(cg));
   }
 
-  async update(id: string, classGroup: ClassGroup): Promise<ClassGroup> {
+  async update(id: string, classGroup: ClassGroup, userId: string): Promise<ClassGroup> {
     if (!id || typeof id !== 'string') {
       throw new Error('Invalid classGroup ID');
     }
     
     const data = this.toPrismaData(classGroup);
     const updated = await prisma.classGroup.update({
-      where: { id },
+      where: { id, userId },
       data,
     });
     return this.toDomain(updated);
@@ -109,5 +131,26 @@ export class PrismaClassGroupRepository implements IClassGroupRepository {
       where: { id },
     });
     return count > 0;
+  }
+
+  async existsByIdAndUserId(id: string, userId: string): Promise<boolean> {
+    if (!id || typeof id !== 'string') {
+      return false;
+    }
+    
+    const count = await prisma.classGroup.count({
+      where: { id, userId },
+    });
+    return count > 0;
+  }
+
+  async deleteByIdAndUserId(id: string, userId: string): Promise<void> {
+    if (!id || typeof id !== 'string') {
+      throw new Error('Invalid classGroup ID');
+    }
+    
+    await prisma.classGroup.delete({
+      where: { id, userId },
+    });
   }
 }

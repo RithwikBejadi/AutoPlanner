@@ -129,10 +129,11 @@ export class PrismaTimetableRepository implements ITimetableRepository {
     return date;
   }
 
-  async create(timetable: Timetable): Promise<Timetable> {
+  async create(timetable: Timetable, userId: string): Promise<Timetable> {
     const created = await prisma.timetable.create({
       data: {
         id: timetable.getId(),
+        userId,
         createdAt: timetable.getCreatedAt(),
         updatedAt: timetable.getUpdatedAt(),
       }
@@ -183,8 +184,38 @@ export class PrismaTimetableRepository implements ITimetableRepository {
     return found ? this.toDomain(found) : null;
   }
 
+  async findLatestByUserId(userId: string): Promise<Timetable | null> {
+    const found = await prisma.timetable.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    return found ? this.toDomain(found) : null;
+  }
+
+  async findByIdAndUserId(id: string, userId: string): Promise<Timetable | null> {
+    if (!id || typeof id !== 'string') {
+      throw new Error('Invalid timetable ID');
+    }
+    
+    const found = await prisma.timetable.findFirst({
+      where: { id, userId },
+    });
+    
+    return found ? this.toDomain(found) : null;
+  }
+
   async findAll(): Promise<Timetable[]> {
     const timetables = await prisma.timetable.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    return Promise.all(timetables.map(t => this.toDomain(t)));
+  }
+
+  async findAllByUserId(userId: string): Promise<Timetable[]> {
+    const timetables = await prisma.timetable.findMany({
+      where: { userId },
       orderBy: { createdAt: 'desc' }
     });
     
@@ -254,13 +285,18 @@ export class PrismaTimetableRepository implements ITimetableRepository {
     });
   }
 
-  async findEntriesByTimetable(timetableId: string): Promise<ScheduleEntry[]> {
+  async findEntriesByTimetable(timetableId: string, userId?: string): Promise<ScheduleEntry[]> {
     if (!timetableId || typeof timetableId !== 'string') {
       throw new Error('Invalid timetable ID');
     }
     
+    const where: any = { timetableId };
+    if (userId) {
+      where.timetable = { userId };
+    }
+    
     const entries = await prisma.scheduleEntry.findMany({
-      where: { timetableId },
+      where,
       include: {
         teacher: true,
         room: true,
@@ -273,7 +309,7 @@ export class PrismaTimetableRepository implements ITimetableRepository {
     return Promise.all(entries.map(e => this.scheduleEntryToDomain(e)));
   }
 
-  async findEntriesByTeacher(timetableId: string, teacherId: string): Promise<ScheduleEntry[]> {
+  async findEntriesByTeacher(timetableId: string, teacherId: string, userId?: string): Promise<ScheduleEntry[]> {
     if (!timetableId || typeof timetableId !== 'string') {
       throw new Error('Invalid timetable ID');
     }
@@ -281,11 +317,13 @@ export class PrismaTimetableRepository implements ITimetableRepository {
       throw new Error('Invalid teacher ID');
     }
     
+    const where: any = { timetableId, teacherId };
+    if (userId) {
+      where.timetable = { userId };
+    }
+    
     const entries = await prisma.scheduleEntry.findMany({
-      where: {
-        timetableId,
-        teacherId
-      },
+      where,
       include: {
         teacher: true,
         room: true,
@@ -298,7 +336,7 @@ export class PrismaTimetableRepository implements ITimetableRepository {
     return Promise.all(entries.map(e => this.scheduleEntryToDomain(e)));
   }
 
-  async findEntriesByClassGroup(timetableId: string, classGroupId: string): Promise<ScheduleEntry[]> {
+  async findEntriesByClassGroup(timetableId: string, classGroupId: string, userId?: string): Promise<ScheduleEntry[]> {
     if (!timetableId || typeof timetableId !== 'string') {
       throw new Error('Invalid timetable ID');
     }
@@ -306,11 +344,13 @@ export class PrismaTimetableRepository implements ITimetableRepository {
       throw new Error('Invalid classGroup ID');
     }
     
+    const where: any = { timetableId, classGroupId };
+    if (userId) {
+      where.timetable = { userId };
+    }
+    
     const entries = await prisma.scheduleEntry.findMany({
-      where: {
-        timetableId,
-        classGroupId
-      },
+      where,
       include: {
         teacher: true,
         room: true,
@@ -323,7 +363,7 @@ export class PrismaTimetableRepository implements ITimetableRepository {
     return Promise.all(entries.map(e => this.scheduleEntryToDomain(e)));
   }
 
-  async findEntriesByRoom(timetableId: string, roomId: string): Promise<ScheduleEntry[]> {
+  async findEntriesByRoom(timetableId: string, roomId: string, userId?: string): Promise<ScheduleEntry[]> {
     if (!timetableId || typeof timetableId !== 'string') {
       throw new Error('Invalid timetable ID');
     }
@@ -331,11 +371,13 @@ export class PrismaTimetableRepository implements ITimetableRepository {
       throw new Error('Invalid room ID');
     }
     
+    const where: any = { timetableId, roomId };
+    if (userId) {
+      where.timetable = { userId };
+    }
+    
     const entries = await prisma.scheduleEntry.findMany({
-      where: {
-        timetableId,
-        roomId
-      },
+      where,
       include: {
         teacher: true,
         room: true,
@@ -368,5 +410,26 @@ export class PrismaTimetableRepository implements ITimetableRepository {
       where: { id },
     });
     return count > 0;
+  }
+
+  async existsByIdAndUserId(id: string, userId: string): Promise<boolean> {
+    if (!id || typeof id !== 'string') {
+      return false;
+    }
+    
+    const count = await prisma.timetable.count({
+      where: { id, userId },
+    });
+    return count > 0;
+  }
+
+  async deleteByIdAndUserId(id: string, userId: string): Promise<void> {
+    if (!id || typeof id !== 'string') {
+      throw new Error('Invalid timetable ID');
+    }
+    
+    await prisma.timetable.delete({
+      where: { id, userId },
+    });
   }
 }

@@ -23,8 +23,11 @@ export class PrismaRoomRepository implements IRoomRepository {
     };
   }
 
-  async create(room: Room): Promise<Room> {
-    const data = this.toPrismaData(room);
+  async create(room: Room, userId: string): Promise<Room> {
+    const data = {
+      ...this.toPrismaData(room),
+      userId,
+    };
     const created = await prisma.room.create({ data });
     return this.toDomain(created);
   }
@@ -45,6 +48,25 @@ export class PrismaRoomRepository implements IRoomRepository {
       orderBy: { name: 'asc' }
     });
     return rooms.map(r => this.toDomain(r));
+  }
+
+  async findAllByUserId(userId: string): Promise<Room[]> {
+    const rooms = await prisma.room.findMany({
+      where: { userId },
+      orderBy: { name: 'asc' }
+    });
+    return rooms.map(r => this.toDomain(r));
+  }
+
+  async findByIdAndUserId(id: string, userId: string): Promise<Room | null> {
+    if (!id || typeof id !== 'string') {
+      throw new Error('Invalid room ID');
+    }
+    
+    const found = await prisma.room.findFirst({
+      where: { id, userId },
+    });
+    return found ? this.toDomain(found) : null;
   }
 
   async findByName(name: string): Promise<Room | null> {
@@ -78,14 +100,14 @@ export class PrismaRoomRepository implements IRoomRepository {
     return rooms.map(r => this.toDomain(r));
   }
 
-  async update(id: string, room: Room): Promise<Room> {
+  async update(id: string, room: Room, userId: string): Promise<Room> {
     if (!id || typeof id !== 'string') {
       throw new Error('Invalid room ID');
     }
     
     const data = this.toPrismaData(room);
     const updated = await prisma.room.update({
-      where: { id },
+      where: { id, userId },
       data,
     });
     return this.toDomain(updated);
@@ -110,5 +132,26 @@ export class PrismaRoomRepository implements IRoomRepository {
       where: { id },
     });
     return count > 0;
+  }
+
+  async existsByIdAndUserId(id: string, userId: string): Promise<boolean> {
+    if (!id || typeof id !== 'string') {
+      return false;
+    }
+    
+    const count = await prisma.room.count({
+      where: { id, userId },
+    });
+    return count > 0;
+  }
+
+  async deleteByIdAndUserId(id: string, userId: string): Promise<void> {
+    if (!id || typeof id !== 'string') {
+      throw new Error('Invalid room ID');
+    }
+    
+    await prisma.room.delete({
+      where: { id, userId },
+    });
   }
 }

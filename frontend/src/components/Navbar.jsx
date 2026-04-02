@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: 'dashboard', exact: true },
@@ -13,6 +14,7 @@ const navItems = [
 
 export default function Sidebar() {
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   return (
     <aside className="h-screen w-64 fixed left-0 top-0 glass-sidebar flex flex-col py-6 px-4 z-50 border-r border-outline-variant/10">
@@ -63,14 +65,27 @@ export default function Sidebar() {
       </nav>
 
       <div className="mt-auto pt-6 border-t border-outline-variant/10 space-y-1">
-        <div className="px-3 py-2.5 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center flex-shrink-0 border border-primary/20">
-            <span className="material-symbols-outlined" style={{fontSize: 16, color: '#c4c1fb'}}>person</span>
+        <div className="px-3 py-2.5 flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            {user?.picture ? (
+              <img src={user.picture} alt={user.name} className="w-8 h-8 rounded-full object-cover border border-primary/20" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center flex-shrink-0 border border-primary/20">
+                <span className="material-symbols-outlined" style={{fontSize: 16, color: '#c4c1fb'}}>person</span>
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-on-surface truncate">{user?.name || 'Admin'}</p>
+              <p className="text-[10px] text-on-surface-variant truncate">{user?.email || 'Global Coordinator'}</p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-on-surface truncate">Admin</p>
-            <p className="text-[10px] text-on-surface-variant truncate">Global Coordinator</p>
-          </div>
+          <button 
+            onClick={logout}
+            className="flex items-center justify-center gap-2 w-full py-2 mt-2 rounded-lg text-xs font-medium text-error hover:bg-error/10 transition-colors"
+          >
+            <span className="material-symbols-outlined" style={{fontSize: 16}}>logout</span>
+            Sign Out
+          </button>
         </div>
       </div>
     </aside>

@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import { timeSlotController } from '../controllers/timeSlotController.js';
+import { authenticate } from '../middleware/auth.js';
 
 export const timeSlotRouter = Router();
+
+timeSlotRouter.use(authenticate);
 
 timeSlotRouter.get('/', (req, res) => timeSlotController.getAll(req, res));
 timeSlotRouter.get('/day/:day', (req, res) => timeSlotController.getByDay(req, res));

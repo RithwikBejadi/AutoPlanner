@@ -1,6 +1,8 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import { authRouter } from './routes/authRoutes.js';
 import { subjectRouter } from './routes/subjectRoutes.js';
 import { roomRouter } from './routes/roomRoutes.js';
 import { timeSlotRouter } from './routes/timeSlotRoutes.js';
@@ -17,6 +19,7 @@ app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
   credentials: true
 }));
+app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -37,6 +40,7 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
+app.use('/api/auth', authRouter);
 app.use('/api/subjects', subjectRouter);
 app.use('/api/rooms', roomRouter);
 app.use('/api/timeslots', timeSlotRouter);

@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import { roomController } from '../controllers/roomController.js';
+import { authenticate } from '../middleware/auth.js';
 
 export const roomRouter = Router();
+
+roomRouter.use(authenticate);
 
 roomRouter.get('/', (req, res) => roomController.getAll(req, res));
 roomRouter.get('/:id', (req, res) => roomController.getById(req, res));

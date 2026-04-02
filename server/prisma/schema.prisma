@@ -7,13 +7,33 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id           String       @id @default(uuid())
+  googleId     String       @unique
+  email        String       @unique
+  name         String
+  picture      String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  teachers     Teacher[]
+  rooms        Room[]
+  subjects     Subject[]
+  classGroups  ClassGroup[]
+  timeSlots    TimeSlot[]
+  timetables   Timetable[]
+}
+
 model Teacher {
   id              String            @id @default(uuid())
   name            String
-  email           String            @unique
+  email           String
   subjects        TeacherSubject[]
   availability    TeacherTimeSlot[]
   scheduleEntries ScheduleEntry[]
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+
+  @@unique([userId, email])
 }
 
 model Room {
@@ -22,17 +42,23 @@ model Room {
   capacity        Int
   hasLabEquipment Boolean         @default(false)
   scheduleEntries ScheduleEntry[]
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
 }
 
 model Subject {
   id                String           @id @default(uuid())
   name              String
-  code              String           @unique
+  code              String
   hoursPerWeek      Int
   requiresLab       Boolean          @default(false)
   maxSessionsPerDay Int              @default(1)
   teachers          TeacherSubject[]
   scheduleEntries   ScheduleEntry[]
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String
+
+  @@unique([userId, code])
 }
 
 model ClassGroup {
@@ -40,15 +66,19 @@ model ClassGroup {
   name            String
   studentCount    Int
   scheduleEntries ScheduleEntry[]
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
 }
 
 model TimeSlot {
-  id           String            @id @default(uuid())
-  day          String            
-  startTime    String            
-  endTime      String            
-  teacherSlots TeacherTimeSlot[]
+  id              String            @id @default(uuid())
+  day             String            
+  startTime       String            
+  endTime         String            
+  teacherSlots    TeacherTimeSlot[]
   scheduleEntries ScheduleEntry[]
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
 }
 
 model Timetable {
@@ -56,6 +86,8 @@ model Timetable {
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
   entries   ScheduleEntry[]
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
 }
 
 model ScheduleEntry {

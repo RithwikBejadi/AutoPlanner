@@ -28,8 +28,11 @@ export class PrismaSubjectRepository implements ISubjectRepository {
   }
 
 
-  async create(subject: Subject): Promise<Subject> {
-    const data = this.toPrismaData(subject);
+  async create(subject: Subject, userId: string): Promise<Subject> {
+    const data = {
+      ...this.toPrismaData(subject),
+      userId,
+    };
     const created = await prisma.subject.create({ data });
     return this.toDomain(created);
   }
@@ -46,17 +49,31 @@ export class PrismaSubjectRepository implements ISubjectRepository {
     return subjects.map(s => this.toDomain(s));
   }
 
+  async findAllByUserId(userId: string): Promise<Subject[]> {
+    const subjects = await prisma.subject.findMany({
+      where: { userId },
+    });
+    return subjects.map(s => this.toDomain(s));
+  }
+
+  async findByIdAndUserId(id: string, userId: string): Promise<Subject | null> {
+    const found = await prisma.subject.findFirst({
+      where: { id, userId },
+    });
+    return found ? this.toDomain(found) : null;
+  }
+
   async findByCode(code: string): Promise<Subject | null> {
-    const found = await prisma.subject.findUnique({
+    const found = await prisma.subject.findFirst({
       where: { code },
     });
     return found ? this.toDomain(found) : null;
   }
 
-  async update(id: string, subject: Subject): Promise<Subject> {
+  async update(id: string, subject: Subject, userId: string): Promise<Subject> {
     const data = this.toPrismaData(subject);
     const updated = await prisma.subject.update({
-      where: { id },
+      where: { id, userId },
       data,
     });
     return this.toDomain(updated);
@@ -73,5 +90,18 @@ export class PrismaSubjectRepository implements ISubjectRepository {
       where: { id },
     });
     return count > 0;
+  }
+
+  async existsByIdAndUserId(id: string, userId: string): Promise<boolean> {
+    const count = await prisma.subject.count({
+      where: { id, userId },
+    });
+    return count > 0;
+  }
+
+  async deleteByIdAndUserId(id: string, userId: string): Promise<void> {
+    await prisma.subject.delete({
+      where: { id, userId },
+    });
   }
 }

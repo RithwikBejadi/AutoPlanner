@@ -1,4 +1,5 @@
-import { type Request, type Response } from 'express';
+import type { Response } from 'express';
+import type { AuthRequest } from '../middleware/auth.js';
 import { PrismaSubjectRepository } from '../repositories/implementations/PrismaSubjectRepository.js';
 import { Subject } from '../domain/entities/Subject.js';
 import { randomUUID } from 'crypto';
@@ -7,9 +8,10 @@ const subjectRepo = new PrismaSubjectRepository();
 
 export class SubjectController {
   
-  async getAll(req: Request, res: Response): Promise<void> {
+  async getAll(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const subjects = await subjectRepo.findAll();
+      const userId = req.user!.id;
+      const subjects = await subjectRepo.findAllByUserId(userId);
       
       res.json({
         success: true,
@@ -31,9 +33,10 @@ export class SubjectController {
     }
   }
 
-  async getById(req: Request, res: Response): Promise<void> {
+  async getById(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const userId = req.user!.id;
       
       if (!id || typeof id !== 'string') {
         res.status(400).json({
@@ -43,7 +46,7 @@ export class SubjectController {
         return;
       }
 
-      const subject = await subjectRepo.findById(id);
+      const subject = await subjectRepo.findByIdAndUserId(id, userId);
       
       if (!subject) {
         res.status(404).json({
@@ -73,9 +76,10 @@ export class SubjectController {
     }
   }
 
-  async create(req: Request, res: Response): Promise<void> {
+  async create(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { name, code, hoursPerWeek, requiresLab, maxSessionsPerDay } = req.body;
+      const userId = req.user!.id;
 
       
       if (!name || !code || !hoursPerWeek || maxSessionsPerDay === undefined) {
@@ -96,7 +100,7 @@ export class SubjectController {
         maxSessionsPerDay
       );
 
-      const created = await subjectRepo.create(subject);
+      const created = await subjectRepo.create(subject, userId);
 
       res.status(201).json({
         success: true,
@@ -118,10 +122,11 @@ export class SubjectController {
     }
   }
 
-  async update(req: Request, res: Response): Promise<void> {
+  async update(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const { name, code, hoursPerWeek, requiresLab, maxSessionsPerDay } = req.body;
+      const userId = req.user!.id;
 
       if (!id || typeof id !== 'string') {
         res.status(400).json({
@@ -131,7 +136,7 @@ export class SubjectController {
         return;
       }
 
-      const exists = await subjectRepo.exists(id);
+      const exists = await subjectRepo.existsByIdAndUserId(id, userId);
       if (!exists) {
         res.status(404).json({
           success: false,
@@ -141,7 +146,7 @@ export class SubjectController {
       }
 
       const subject = new Subject(id, name, code, hoursPerWeek, requiresLab, maxSessionsPerDay);
-      const updated = await subjectRepo.update(id, subject);
+      const updated = await subjectRepo.update(id, subject, userId);
 
       res.json({
         success: true,
@@ -163,22 +168,23 @@ export class SubjectController {
     }
   }
 
-  async delete(req: Request, res: Response): Promise<void> {
+  async delete(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const userId = req.user!.id;
 
       if (!id || typeof id !== 'string') {
         res.status(400).json({ success: false, error: 'Subject ID is required' });
         return;
       }
 
-      const exists = await subjectRepo.exists(id);
+      const exists = await subjectRepo.existsByIdAndUserId(id, userId);
       if (!exists) {
         res.status(404).json({ success: false, error: 'Subject not found' });
         return;
       }
 
-      await subjectRepo.delete(id);
+      await subjectRepo.deleteByIdAndUserId(id, userId);
       res.json({ success: true, message: 'Subject deleted successfully' });
     } catch (error) {
       res.status(500).json({

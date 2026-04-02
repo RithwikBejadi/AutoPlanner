@@ -5,6 +5,7 @@ export type { ITimeSlotRepository } from './interfaces/ITimeSlotRepository.js';
 export type { IClassGroupRepository } from './interfaces/IClassGroupRepository.js';
 export type { ITeacherRepository } from './interfaces/ITeacherRepository.js';
 export type { ITimetableRepository } from './interfaces/ITimetableRepository.js';
+export type { IUserRepository } from './interfaces/IUserRepository.js';
 
 
 export { PrismaSubjectRepository } from './implementations/PrismaSubjectRepository.js';
@@ -13,4 +14,5 @@ export { PrismaTimeSlotRepository } from './implementations/PrismaTimeSlotReposi
 export { PrismaClassGroupRepository } from './implementations/PrismaClassGroupRepository.js';
 export { PrismaTeacherRepository } from './implementations/PrismaTeacherRepository.js';
 export { PrismaTimetableRepository } from './implementations/PrismaTimetableRepository.js';
+export { PrismaUserRepository } from './implementations/PrismaUserRepository.js';
 

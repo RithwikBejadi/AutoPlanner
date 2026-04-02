@@ -1,4 +1,5 @@
-import { type Request, type Response } from 'express';
+import type { Response } from 'express';
+import type { AuthRequest } from '../middleware/auth.js';
 import { PrismaRoomRepository } from '../repositories/implementations/PrismaRoomRepository.js';
 import { Room } from '../domain/entities/Room.js';
 import { randomUUID } from 'crypto';
@@ -7,9 +8,10 @@ const roomRepo = new PrismaRoomRepository();
 
 export class RoomController {
   
-  async getAll(req: Request, res: Response): Promise<void> {
+  async getAll(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const rooms = await roomRepo.findAll();
+      const userId = req.user!.id;
+      const rooms = await roomRepo.findAllByUserId(userId);
       
       res.json({
         success: true,
@@ -29,9 +31,10 @@ export class RoomController {
     }
   }
 
-  async getById(req: Request, res: Response): Promise<void> {
+  async getById(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const userId = req.user!.id;
       
       if (!id || typeof id !== 'string') {
         res.status(400).json({
@@ -41,7 +44,7 @@ export class RoomController {
         return;
       }
 
-      const room = await roomRepo.findById(id);
+      const room = await roomRepo.findByIdAndUserId(id, userId);
       
       if (!room) {
         res.status(404).json({
@@ -69,9 +72,10 @@ export class RoomController {
     }
   }
 
-  async create(req: Request, res: Response): Promise<void> {
+  async create(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { name, capacity, hasLabEquipment } = req.body;
+      const userId = req.user!.id;
 
       if (!name || !capacity) {
         res.status(400).json({
@@ -88,7 +92,7 @@ export class RoomController {
         hasLabEquipment || false
       );
 
-      const created = await roomRepo.create(room);
+      const created = await roomRepo.create(room, userId);
 
       res.status(201).json({
         success: true,
@@ -108,10 +112,11 @@ export class RoomController {
     }
   }
 
-  async update(req: Request, res: Response): Promise<void> {
+  async update(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const { name, capacity, hasLabEquipment } = req.body;
+      const userId = req.user!.id;
 
       if (!id || typeof id !== 'string') {
         res.status(400).json({
@@ -121,7 +126,7 @@ export class RoomController {
         return;
       }
 
-      const exists = await roomRepo.exists(id);
+      const exists = await roomRepo.existsByIdAndUserId(id, userId);
       if (!exists) {
         res.status(404).json({
           success: false,
@@ -131,7 +136,7 @@ export class RoomController {
       }
 
       const room = new Room(id, name, capacity, hasLabEquipment);
-      const updated = await roomRepo.update(id, room);
+      const updated = await roomRepo.update(id, room, userId);
 
       res.json({
         success: true,
@@ -151,22 +156,23 @@ export class RoomController {
     }
   }
 
-  async delete(req: Request, res: Response): Promise<void> {
+  async delete(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const userId = req.user!.id;
 
       if (!id || typeof id !== 'string') {
         res.status(400).json({ success: false, error: 'Room ID is required' });
         return;
       }
 
-      const exists = await roomRepo.exists(id);
+      const exists = await roomRepo.existsByIdAndUserId(id, userId);
       if (!exists) {
         res.status(404).json({ success: false, error: 'Room not found' });
         return;
       }
 
-      await roomRepo.delete(id);
+      await roomRepo.deleteByIdAndUserId(id, userId);
       res.json({ success: true, message: 'Room deleted successfully' });
     } catch (error) {
       res.status(500).json({

@@ -49,8 +49,11 @@ export class PrismaTimeSlotRepository implements ITimeSlotRepository {
     return `${hours}:${minutes}`;
   }
 
-  async create(timeSlot: TimeSlot): Promise<TimeSlot> {
-    const data = this.toPrismaData(timeSlot);
+  async create(timeSlot: TimeSlot, userId: string): Promise<TimeSlot> {
+    const data = {
+      ...this.toPrismaData(timeSlot),
+      userId,
+    };
     const created = await prisma.timeSlot.create({ data });
     return this.toDomain(created);
   }
@@ -74,6 +77,28 @@ export class PrismaTimeSlotRepository implements ITimeSlotRepository {
       ]
     });
     return timeSlots.map(ts => this.toDomain(ts));
+  }
+
+  async findAllByUserId(userId: string): Promise<TimeSlot[]> {
+    const timeSlots = await prisma.timeSlot.findMany({
+      where: { userId },
+      orderBy: [
+        { day: 'asc' },
+        { startTime: 'asc' }
+      ]
+    });
+    return timeSlots.map(ts => this.toDomain(ts));
+  }
+
+  async findByIdAndUserId(id: string, userId: string): Promise<TimeSlot | null> {
+    if (!id || typeof id !== 'string') {
+      throw new Error('Invalid timeSlot ID');
+    }
+    
+    const found = await prisma.timeSlot.findFirst({
+      where: { id, userId },
+    });
+    return found ? this.toDomain(found) : null;
   }
 
   async findByDay(day: string): Promise<TimeSlot[]> {
@@ -146,5 +171,26 @@ export class PrismaTimeSlotRepository implements ITimeSlotRepository {
       where: { id },
     });
     return count > 0;
+  }
+
+  async existsByIdAndUserId(id: string, userId: string): Promise<boolean> {
+    if (!id || typeof id !== 'string') {
+      return false;
+    }
+    
+    const count = await prisma.timeSlot.count({
+      where: { id, userId },
+    });
+    return count > 0;
+  }
+
+  async deleteByIdAndUserId(id: string, userId: string): Promise<void> {
+    if (!id || typeof id !== 'string') {
+      throw new Error('Invalid timeSlot ID');
+    }
+    
+    await prisma.timeSlot.delete({
+      where: { id, userId },
+    });
   }
 }

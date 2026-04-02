@@ -1,8 +1,12 @@
 import axios from 'axios';
 
-const api = axios.create({ baseURL: '/api' });
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
-// Add request interceptor for logging (development only)
+const api = axios.create({ 
+  baseURL: API_BASE_URL,
+  withCredentials: true
+});
+
 if (process.env.NODE_ENV === 'development') {
   api.interceptors.request.use(
     (config) => {
@@ -15,23 +19,28 @@ if (process.env.NODE_ENV === 'development') {
   );
 }
 
-// Add response interceptor for error handling
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Log errors in development
     if (process.env.NODE_ENV === 'development') {
       console.error('[API Error]', error.response?.data || error.message);
     }
     
-    // You can add global error handling here
-    // For example, redirect to login on 401, show toast on 500, etc.
+    if (error.response?.status === 401) {
+      const currentPath = window.location.pathname;
+      if (currentPath !== '/login') {
+        window.location.href = '/login';
+      }
+    }
     
     return Promise.reject(error);
   }
 );
 
 
+
+export const getCurrentUser = () => api.get('/auth/me').then(r => r.data);
+export const logout = () => api.post('/auth/logout').then(r => r.data);
 
 export const getTeachers = () => api.get('/teachers').then(r => r.data.data);
 export const createTeacher = (data) => api.post('/teachers', data).then(r => r.data.data);

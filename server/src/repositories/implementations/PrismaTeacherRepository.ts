@@ -55,7 +55,7 @@ export class PrismaTeacherRepository implements ITeacherRepository {
     return date;
   }
 
-  async create(teacher: Teacher, subjectIds: string[], timeSlotIds: string[]): Promise<Teacher> {
+  async create(teacher: Teacher, subjectIds: string[], timeSlotIds: string[], userId: string): Promise<Teacher> {
     
     if (!subjectIds || subjectIds.length === 0) {
       throw new Error('Teacher must have at least one subject');
@@ -71,7 +71,8 @@ export class PrismaTeacherRepository implements ITeacherRepository {
         data: {
           id: teacher.getId(),
           name: teacher.getName(),
-          email: `${teacher.getId()}@school.edu`, 
+          email: `${teacher.getId()}@school.edu`,
+          userId: userId
         }
       });
       
@@ -95,6 +96,48 @@ export class PrismaTeacherRepository implements ITeacherRepository {
     });
     
     return this.toDomain(created);
+  }
+
+  async findAllByUserId(userId: string): Promise<Teacher[]> {
+    const teachers = await prisma.teacher.findMany({
+      where: { userId },
+      orderBy: { name: 'asc' }
+    });
+    
+    return Promise.all(teachers.map(t => this.toDomain(t)));
+  }
+
+  async findByIdAndUserId(id: string, userId: string): Promise<Teacher | null> {
+    if (!id || typeof id !== 'string') {
+      throw new Error('Invalid teacher ID');
+    }
+    
+    const found = await prisma.teacher.findFirst({
+      where: { id, userId },
+    });
+    
+    return found ? this.toDomain(found) : null;
+  }
+
+  async existsByIdAndUserId(id: string, userId: string): Promise<boolean> {
+    if (!id || typeof id !== 'string') {
+      return false;
+    }
+    
+    const count = await prisma.teacher.count({
+      where: { id, userId },
+    });
+    return count > 0;
+  }
+
+  async deleteByIdAndUserId(id: string, userId: string): Promise<void> {
+    if (!id || typeof id !== 'string') {
+      throw new Error('Invalid teacher ID');
+    }
+    
+    await prisma.teacher.delete({
+      where: { id, userId },
+    });
   }
 
   async findById(id: string): Promise<Teacher | null> {
@@ -128,7 +171,7 @@ export class PrismaTeacherRepository implements ITeacherRepository {
       throw new Error('Invalid email format');
     }
     
-    const found = await prisma.teacher.findUnique({
+    const found = await prisma.teacher.findFirst({
       where: { email: email.toLowerCase().trim() },
     });
     
@@ -165,7 +208,7 @@ export class PrismaTeacherRepository implements ITeacherRepository {
     );
   }
 
-  async update(id: string, teacher: Teacher, subjectIds: string[], timeSlotIds: string[]): Promise<Teacher> {
+  async update(id: string, teacher: Teacher, subjectIds: string[], timeSlotIds: string[], userId: string): Promise<Teacher> {
     if (!id || typeof id !== 'string') {
       throw new Error('Invalid teacher ID');
     }
@@ -180,7 +223,7 @@ export class PrismaTeacherRepository implements ITeacherRepository {
     const updated = await prisma.$transaction(async (tx) => {
       
       const updatedTeacher = await tx.teacher.update({
-        where: { id },
+        where: { id, userId },
         data: {
           name: teacher.getName(),
         }

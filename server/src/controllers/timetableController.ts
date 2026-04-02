@@ -1,4 +1,5 @@
-import { type Request, type Response } from 'express';
+import type { Response } from 'express';
+import type { AuthRequest } from '../middleware/auth.js';
 import { PrismaTimetableRepository } from '../repositories/implementations/PrismaTimetableRepository.js';
 import { PrismaTeacherRepository } from '../repositories/implementations/PrismaTeacherRepository.js';
 import { PrismaRoomRepository } from '../repositories/implementations/PrismaRoomRepository.js';
@@ -50,16 +51,17 @@ function serializeEntry(entry: {
 
 export class TimetableController {
 
-    async generate(req: Request, res: Response): Promise<void> {
+    async generate(req: AuthRequest, res: Response): Promise<void> {
     try {
+      const userId = req.user!.id;
       
       const [teachers, rooms, subjects, classGroups, timeSlots] =
         await Promise.all([
-          teacherRepo.findAll(),
-          roomRepo.findAll(),
-          subjectRepo.findAll(),
-          classGroupRepo.findAll(),
-          timeSlotRepo.findAll(),
+          teacherRepo.findAllByUserId(userId),
+          roomRepo.findAllByUserId(userId),
+          subjectRepo.findAllByUserId(userId),
+          classGroupRepo.findAllByUserId(userId),
+          timeSlotRepo.findAllByUserId(userId),
         ]);
 
       
@@ -72,7 +74,7 @@ export class TimetableController {
       });
 
       
-      const saved = await timetableRepo.create(result.timetable);
+      const saved = await timetableRepo.create(result.timetable, userId);
 
       
       res.status(201).json({
@@ -99,9 +101,10 @@ export class TimetableController {
     }
   }
 
-    async getLatest(_req: Request, res: Response): Promise<void> {
+    async getLatest(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const timetable = await timetableRepo.findLatest();
+      const userId = req.user!.id;
+      const timetable = await timetableRepo.findLatestByUserId(userId);
 
       if (!timetable) {
         res.status(404).json({ success: false, error: 'No timetable found' });
@@ -128,16 +131,17 @@ export class TimetableController {
     }
   }
 
-    async getById(req: Request, res: Response): Promise<void> {
+    async getById(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const userId = req.user!.id;
 
       if (!id || typeof id !== 'string') {
         res.status(400).json({ success: false, error: 'Timetable ID is required' });
         return;
       }
 
-      const timetable = await timetableRepo.findById(id);
+      const timetable = await timetableRepo.findByIdAndUserId(id, userId);
 
       if (!timetable) {
         res.status(404).json({ success: false, error: 'Timetable not found' });
@@ -164,9 +168,10 @@ export class TimetableController {
     }
   }
 
-    async getEntriesByFilter(req: Request, res: Response): Promise<void> {
+    async getEntriesByFilter(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { timetableId, teacherId, classGroupId, roomId } = req.query;
+      const userId = req.user!.id;
 
       if (!timetableId || typeof timetableId !== 'string') {
         res.status(400).json({ success: false, error: 'timetableId query param is required' });
@@ -175,13 +180,13 @@ export class TimetableController {
 
       let entries;
       if (teacherId && typeof teacherId === 'string') {
-        entries = await timetableRepo.findEntriesByTeacher(timetableId, teacherId);
+        entries = await timetableRepo.findEntriesByTeacher(timetableId, teacherId, userId);
       } else if (classGroupId && typeof classGroupId === 'string') {
-        entries = await timetableRepo.findEntriesByClassGroup(timetableId, classGroupId);
+        entries = await timetableRepo.findEntriesByClassGroup(timetableId, classGroupId, userId);
       } else if (roomId && typeof roomId === 'string') {
-        entries = await timetableRepo.findEntriesByRoom(timetableId, roomId);
+        entries = await timetableRepo.findEntriesByRoom(timetableId, roomId, userId);
       } else {
-        entries = await timetableRepo.findEntriesByTimetable(timetableId);
+        entries = await timetableRepo.findEntriesByTimetable(timetableId, userId);
       }
 
       res.json({
@@ -198,22 +203,23 @@ export class TimetableController {
     }
   }
 
-    async delete(req: Request, res: Response): Promise<void> {
+    async delete(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const userId = req.user!.id;
 
       if (!id || typeof id !== 'string') {
         res.status(400).json({ success: false, error: 'Timetable ID is required' });
         return;
       }
 
-      const exists = await timetableRepo.exists(id);
+      const exists = await timetableRepo.existsByIdAndUserId(id, userId);
       if (!exists) {
         res.status(404).json({ success: false, error: 'Timetable not found' });
         return;
       }
 
-      await timetableRepo.delete(id);
+      await timetableRepo.deleteByIdAndUserId(id, userId);
       res.json({ success: true, message: 'Timetable deleted successfully' });
     } catch (error) {
       res.status(500).json({

@@ -1,4 +1,5 @@
-import { type Request, type Response } from 'express';
+import type { Response } from 'express';
+import type { AuthRequest } from '../middleware/auth.js';
 import { PrismaTimeSlotRepository } from '../repositories/implementations/PrismaTimeSlotRepository.js';
 import { TimeSlot } from '../domain/entities/TimeSlot.js';
 
@@ -6,9 +7,10 @@ const timeSlotRepo = new PrismaTimeSlotRepository();
 
 export class TimeSlotController {
   
-  async getAll(req: Request, res: Response): Promise<void> {
+  async getAll(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const timeSlots = await timeSlotRepo.findAll();
+      const userId = req.user!.id;
+      const timeSlots = await timeSlotRepo.findAllByUserId(userId);
       
       res.json({
         success: true,
@@ -27,9 +29,10 @@ export class TimeSlotController {
     }
   }
 
-  async getById(req: Request, res: Response): Promise<void> {
+  async getById(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const userId = req.user!.id;
       
       if (!id || typeof id !== 'string') {
         res.status(400).json({
@@ -39,7 +42,7 @@ export class TimeSlotController {
         return;
       }
 
-      const timeSlot = await timeSlotRepo.findById(id);
+      const timeSlot = await timeSlotRepo.findByIdAndUserId(id, userId);
       
       if (!timeSlot) {
         res.status(404).json({
@@ -66,9 +69,10 @@ export class TimeSlotController {
     }
   }
 
-  async getByDay(req: Request, res: Response): Promise<void> {
+  async getByDay(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { day } = req.params;
+      const userId = req.user!.id;
       
       if (!day || typeof day !== 'string') {
         res.status(400).json({
@@ -97,9 +101,10 @@ export class TimeSlotController {
     }
   }
 
-  async create(req: Request, res: Response): Promise<void> {
+  async create(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { day, startTime, endTime } = req.body;
+      const userId = req.user!.id;
 
       if (!day || !startTime || !endTime) {
         res.status(400).json({
@@ -124,7 +129,7 @@ export class TimeSlotController {
         parseTime(endTime)
       );
 
-      const created = await timeSlotRepo.create(timeSlot);
+      const created = await timeSlotRepo.create(timeSlot, userId);
 
       res.status(201).json({
         success: true,
@@ -143,22 +148,23 @@ export class TimeSlotController {
     }
   }
 
-  async delete(req: Request, res: Response): Promise<void> {
+  async delete(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const userId = req.user!.id;
 
       if (!id || typeof id !== 'string') {
         res.status(400).json({ success: false, error: 'TimeSlot ID is required' });
         return;
       }
 
-      const exists = await timeSlotRepo.exists(id);
+      const exists = await timeSlotRepo.existsByIdAndUserId(id, userId);
       if (!exists) {
         res.status(404).json({ success: false, error: 'TimeSlot not found' });
         return;
       }
 
-      await timeSlotRepo.delete(id);
+      await timeSlotRepo.deleteByIdAndUserId(id, userId);
       res.json({ success: true, message: 'TimeSlot deleted successfully' });
     } catch (error) {
       res.status(500).json({

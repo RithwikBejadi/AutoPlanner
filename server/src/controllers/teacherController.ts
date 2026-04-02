@@ -1,4 +1,5 @@
-import { type Request, type Response } from 'express';
+import type { Response } from 'express';
+import type { AuthRequest } from '../middleware/auth.js';
 import { PrismaTeacherRepository } from '../repositories/implementations/PrismaTeacherRepository.js';
 import { Teacher } from '../domain/entities/Teacher.js';
 import { TimeSlot } from '../domain/entities/TimeSlot.js';
@@ -8,9 +9,10 @@ const teacherRepo = new PrismaTeacherRepository();
 
 export class TeacherController {
   
-  async getAll(req: Request, res: Response): Promise<void> {
+  async getAll(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const teachers = await teacherRepo.findAll();
+      const userId = req.user!.id;
+      const teachers = await teacherRepo.findAllByUserId(userId);
       
       res.json({
         success: true,
@@ -34,9 +36,10 @@ export class TeacherController {
     }
   }
 
-  async getById(req: Request, res: Response): Promise<void> {
+  async getById(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const userId = req.user!.id;
       
       if (!id || typeof id !== 'string') {
         res.status(400).json({
@@ -46,7 +49,7 @@ export class TeacherController {
         return;
       }
 
-      const teacher = await teacherRepo.findById(id);
+      const teacher = await teacherRepo.findByIdAndUserId(id, userId);
       
       if (!teacher) {
         res.status(404).json({
@@ -78,9 +81,10 @@ export class TeacherController {
     }
   }
 
-  async create(req: Request, res: Response): Promise<void> {
+  async create(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { name, subjectIds, timeSlotIds } = req.body;
+      const userId = req.user!.id;
 
       if (!name || !subjectIds || !Array.isArray(subjectIds) || !timeSlotIds || !Array.isArray(timeSlotIds)) {
         res.status(400).json({
@@ -98,7 +102,7 @@ export class TeacherController {
         [dummyTimeSlot]
       );
 
-      const created = await teacherRepo.create(teacher, subjectIds, timeSlotIds);
+      const created = await teacherRepo.create(teacher, subjectIds, timeSlotIds, userId);
 
       res.status(201).json({
         success: true,
@@ -122,10 +126,11 @@ export class TeacherController {
     }
   }
 
-  async update(req: Request, res: Response): Promise<void> {
+  async update(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const { name, subjectIds, timeSlotIds } = req.body;
+      const userId = req.user!.id;
 
       if (!id || typeof id !== 'string') {
         res.status(400).json({
@@ -143,7 +148,7 @@ export class TeacherController {
         return;
       }
 
-      const exists = await teacherRepo.exists(id);
+      const exists = await teacherRepo.existsByIdAndUserId(id, userId);
       if (!exists) {
         res.status(404).json({
           success: false,
@@ -154,7 +159,7 @@ export class TeacherController {
 
       const dummyTimeSlot = new TimeSlot('Monday', new Date(0, 0, 0, 9, 0), new Date(0, 0, 0, 10, 0));
       const teacher = new Teacher(id, name, subjectIds, [dummyTimeSlot]);
-      const updated = await teacherRepo.update(id, teacher, subjectIds, timeSlotIds);
+      const updated = await teacherRepo.update(id, teacher, subjectIds, timeSlotIds, userId);
 
       res.json({
         success: true,
@@ -178,22 +183,23 @@ export class TeacherController {
     }
   }
 
-  async delete(req: Request, res: Response): Promise<void> {
+  async delete(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const userId = req.user!.id;
 
       if (!id || typeof id !== 'string') {
         res.status(400).json({ success: false, error: 'Teacher ID is required' });
         return;
       }
 
-      const exists = await teacherRepo.exists(id);
+      const exists = await teacherRepo.existsByIdAndUserId(id, userId);
       if (!exists) {
         res.status(404).json({ success: false, error: 'Teacher not found' });
         return;
       }
 
-      await teacherRepo.delete(id);
+      await teacherRepo.deleteByIdAndUserId(id, userId);
       res.json({ success: true, message: 'Teacher deleted successfully' });
     } catch (error) {
       res.status(500).json({

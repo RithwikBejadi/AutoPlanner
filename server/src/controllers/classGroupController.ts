@@ -1,4 +1,5 @@
-import { type Request, type Response } from 'express';
+import type { Response } from 'express';
+import type { AuthRequest } from '../middleware/auth.js';
 import { PrismaClassGroupRepository } from '../repositories/implementations/PrismaClassGroupRepository.js';
 import { ClassGroup } from '../domain/entities/ClassGroup.js';
 import { randomUUID } from 'crypto';
@@ -7,9 +8,10 @@ const classGroupRepo = new PrismaClassGroupRepository();
 
 export class ClassGroupController {
   
-  async getAll(req: Request, res: Response): Promise<void> {
+  async getAll(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const classGroups = await classGroupRepo.findAll();
+      const userId = req.user!.id;
+      const classGroups = await classGroupRepo.findAllByUserId(userId);
       
       res.json({
         success: true,
@@ -28,9 +30,10 @@ export class ClassGroupController {
     }
   }
 
-  async getById(req: Request, res: Response): Promise<void> {
+  async getById(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const userId = req.user!.id;
       
       if (!id || typeof id !== 'string') {
         res.status(400).json({
@@ -40,7 +43,7 @@ export class ClassGroupController {
         return;
       }
 
-      const classGroup = await classGroupRepo.findById(id);
+      const classGroup = await classGroupRepo.findByIdAndUserId(id, userId);
       
       if (!classGroup) {
         res.status(404).json({
@@ -67,9 +70,10 @@ export class ClassGroupController {
     }
   }
 
-  async create(req: Request, res: Response): Promise<void> {
+  async create(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { name, studentCount } = req.body;
+      const userId = req.user!.id;
 
       if (!name || !studentCount) {
         res.status(400).json({
@@ -85,7 +89,7 @@ export class ClassGroupController {
         studentCount
       );
 
-      const created = await classGroupRepo.create(classGroup);
+      const created = await classGroupRepo.create(classGroup, userId);
 
       res.status(201).json({
         success: true,
@@ -104,10 +108,11 @@ export class ClassGroupController {
     }
   }
 
-  async update(req: Request, res: Response): Promise<void> {
+  async update(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const { name, studentCount } = req.body;
+      const userId = req.user!.id;
 
       if (!id || typeof id !== 'string') {
         res.status(400).json({
@@ -117,7 +122,7 @@ export class ClassGroupController {
         return;
       }
 
-      const exists = await classGroupRepo.exists(id);
+      const exists = await classGroupRepo.existsByIdAndUserId(id, userId);
       if (!exists) {
         res.status(404).json({
           success: false,
@@ -127,7 +132,7 @@ export class ClassGroupController {
       }
 
       const classGroup = new ClassGroup(id, name, studentCount);
-      const updated = await classGroupRepo.update(id, classGroup);
+      const updated = await classGroupRepo.update(id, classGroup, userId);
 
       res.json({
         success: true,
@@ -146,22 +151,23 @@ export class ClassGroupController {
     }
   }
 
-  async delete(req: Request, res: Response): Promise<void> {
+  async delete(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const userId = req.user!.id;
 
       if (!id || typeof id !== 'string') {
         res.status(400).json({ success: false, error: 'ClassGroup ID is required' });
         return;
       }
 
-      const exists = await classGroupRepo.exists(id);
+      const exists = await classGroupRepo.existsByIdAndUserId(id, userId);
       if (!exists) {
         res.status(404).json({ success: false, error: 'ClassGroup not found' });
         return;
       }
 
-      await classGroupRepo.delete(id);
+      await classGroupRepo.deleteByIdAndUserId(id, userId);
       res.json({ success: true, message: 'ClassGroup deleted successfully' });
     } catch (error) {
       res.status(500).json({
