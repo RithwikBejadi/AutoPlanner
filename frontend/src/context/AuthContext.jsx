@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import * as api from '../api';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -15,7 +17,10 @@ export const AuthProvider = ({ children }) => {
       const userData = await api.getCurrentUser();
       
       if (!userData && window.location.pathname !== '/login') {
-        window.location.href = '/login';
+        const params = new URLSearchParams(window.location.search);
+        const oauthError = params.get('error');
+        const loginPath = oauthError ? `/login?error=${encodeURIComponent(oauthError)}` : '/login';
+        navigate(loginPath, { replace: true });
         return;
       }
       
@@ -26,7 +31,7 @@ export const AuthProvider = ({ children }) => {
       }
       setUser(null);
       if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+        navigate('/login', { replace: true });
       }
     } finally {
       setLoading(false);
@@ -46,11 +51,11 @@ export const AuthProvider = ({ children }) => {
     try {
       await api.logout();
       setUser(null);
-      window.location.href = '/login';
+      navigate('/login', { replace: true });
     } catch (err) {
       console.error('Logout error:', err);
       setUser(null);
-      window.location.href = '/login';
+      navigate('/login', { replace: true });
     }
   };
 

@@ -105,7 +105,7 @@ router.get('/google/callback', async (req: AuthRequest, res: Response) => {
     console.error('OAuth callback error:', error);
     import('fs').then(fs => fs.appendFileSync('auth-error.log', '\n' + new Date().toISOString() + ': ' + (error instanceof Error ? error.stack : String(error))));
     const frontendUrl = getFrontendUrl();
-    res.redirect(`${frontendUrl}/login?error=auth_failed`);
+    res.redirect(`${frontendUrl}/?error=auth_failed`);
   }
 });
 

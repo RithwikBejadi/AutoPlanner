@@ -33,7 +33,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       const currentPath = window.location.pathname;
       if (currentPath !== '/login') {
-        window.location.href = '/login';
+        window.history.replaceState({}, '', '/login');
+        window.dispatchEvent(new PopStateEvent('popstate'));
       }
     }
     
