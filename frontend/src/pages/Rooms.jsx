@@ -1,75 +1,262 @@
 import React, { useEffect, useState } from 'react';
-import { getRooms, createRoom, deleteRoom } from '../api';
+import { useRooms } from '../hooks';
+import { useToast } from '../components/Toast';
+import { useFormValidation } from '../hooks/useFormValidation';
+import { roomSchema } from '../schemas/validationSchemas';
+import { FormInput, FormToggle } from '../components/forms/FormFields';
+import { Button, Modal, ConfirmDialog, LoadingSkeleton } from '../components/ui';
+import { handleApiError } from '../utils/errorHandling';
 
-export default function Rooms() {
-  const [rooms, setRooms] = useState([]);
-  const [form, setForm] = useState({ name: '', capacity: '', type: 'LECTURE' });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+function RoomCard({ room, onEdit, onDelete }) {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-  const load = async () => {
-    try { setRooms(await getRooms()); }
-    catch { setError('Failed to load rooms.'); }
-    finally { setLoading(false); }
-  };
-
-  useEffect(() => { load(); }, []);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleDelete = async () => {
+    setDeleting(true);
     try {
-      await createRoom({ ...form, capacity: Number(form.capacity) });
-      setForm({ name: '', capacity: '', type: 'LECTURE' });
-      load();
-    } catch(e) { setError(e.response?.data?.error || 'Failed to create room.'); }
+      await onDelete(room.id);
+      setDeleteDialogOpen(false);
+    } catch (error) {
+      setDeleting(false);
+    }
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Rooms</h1>
-      {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">{error}</div>}
+    <>
+      <div className="card card-hover animate-fade-in">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center flex-shrink-0">
+              <span className="material-symbols-outlined text-secondary" style={{fontSize: 20}}>
+                {room.hasLabEquipment ? 'science' : 'meeting_room'}
+              </span>
+            </div>
+            <div>
+              <h3 className="font-semibold text-on-surface text-sm">{room.name}</h3>
+              <p className="text-xs text-on-surface-variant mt-0.5">Capacity: {room.capacity} students</p>
+            </div>
+          </div>
+        </div>
+        {room.hasLabEquipment && (
+          <div className="mt-3">
+            <span className="badge bg-tertiary/10 text-tertiary border border-tertiary/20">
+              Lab Equipment
+            </span>
+          </div>
+        )}
+        <div className="mt-4 pt-4 border-t border-outline-variant/10 flex justify-end gap-2">
+          <button
+            onClick={() => onEdit(room)}
+            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-primary/10 text-outline hover:text-primary transition-colors"
+            aria-label="Edit room"
+          >
+            <span className="material-symbols-outlined" style={{fontSize: 16}}>edit</span>
+          </button>
+          <button
+            onClick={() => setDeleteDialogOpen(true)}
+            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-error/10 text-outline hover:text-error transition-colors"
+            aria-label="Delete room"
+          >
+            <span className="material-symbols-outlined" style={{fontSize: 16}}>delete</span>
+          </button>
+        </div>
+      </div>
 
-      <form onSubmit={handleSubmit} className="bg-white shadow rounded-xl p-6 flex flex-wrap gap-4">
-        <input required placeholder="Room name" value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))}
-          className="border rounded px-3 py-2 flex-1 min-w-32" />
-        <input required type="number" min="1" placeholder="Capacity" value={form.capacity} onChange={e => setForm(f => ({...f, capacity: e.target.value}))}
-          className="border rounded px-3 py-2 w-32" />
-        <select value={form.type} onChange={e => setForm(f => ({...f, type: e.target.value}))}
-          className="border rounded px-3 py-2">
-          <option value="LECTURE">Lecture</option>
-          <option value="LAB">Lab</option>
-          <option value="SEMINAR">Seminar</option>
-        </select>
-        <button type="submit" className="bg-blue-700 text-white px-5 py-2 rounded font-medium hover:bg-blue-800">Add Room</button>
+      <ConfirmDialog
+        isOpen={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+        title="Delete Room"
+        message={`Are you sure you want to delete ${room.name}? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+        loading={deleting}
+      />
+    </>
+  );
+}
+
+function RoomFormModal({ isOpen, onClose, room, onSuccess }) {
+  const { addRoom, updateRoom } = useRooms();
+  const toast = useToast();
+  const isEdit = !!room;
+
+  const { control, handleSubmit, formState: { isSubmitting }, reset } = useFormValidation(
+    roomSchema,
+    room || { name: '', capacity: 30, hasLabEquipment: false }
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      reset(room || { name: '', capacity: 30, hasLabEquipment: false });
+    }
+  }, [isOpen, room, reset]);
+
+  const onSubmit = async (data) => {
+    try {
+      if (isEdit) {
+        await updateRoom(room.id, data);
+        toast.success(`${data.name} updated successfully`);
+      } else {
+        await addRoom(data);
+        toast.success(`${data.name} added successfully`);
+      }
+      onSuccess();
+      onClose();
+    } catch (error) {
+      handleApiError(error, toast);
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? 'Edit Room' : 'Add New Room'} size="md">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <FormInput
+          name="name"
+          control={control}
+          label="Room Name"
+          placeholder="e.g. Room 101 or Lab A"
+          required
+          icon="meeting_room"
+        />
+
+        <FormInput
+          name="capacity"
+          control={control}
+          label="Capacity"
+          type="number"
+          placeholder="e.g. 30"
+          required
+          icon="groups"
+        />
+
+        <FormToggle
+          name="hasLabEquipment"
+          control={control}
+          label="Lab Equipment"
+          description="This room has specialized laboratory equipment"
+        />
+
+        <div className="flex gap-3 pt-4">
+          <Button type="submit" variant="primary" loading={isSubmitting} icon={isEdit ? 'check' : 'add'}>
+            {isEdit ? 'Update Room' : 'Add Room'}
+          </Button>
+          <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+        </div>
       </form>
+    </Modal>
+  );
+}
 
-      {loading ? <p className="text-gray-400">Loading...</p> : (
-        <div className="bg-white shadow rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500 text-left">
-              <tr>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Capacity</th>
-                <th className="px-4 py-3">Type</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {rooms.map(r => (
-                <tr key={r.id}>
-                  <td className="px-4 py-3 font-medium">{r.name}</td>
-                  <td className="px-4 py-3 text-gray-500">{r.capacity}</td>
-                  <td className="px-4 py-3 text-gray-500">{r.type}</td>
-                  <td className="px-4 py-3">
-                    <button onClick={() => deleteRoom(r.id).then(load)} className="text-red-500 hover:underline text-xs">Remove</button>
-                  </td>
-                </tr>
-              ))}
-              {rooms.length === 0 && <tr><td colSpan={4} className="px-4 py-6 text-center text-gray-400">No rooms yet.</td></tr>}
-            </tbody>
-          </table>
+export default function Rooms() {
+  const { rooms, loading, fetchRooms, deleteRoom } = useRooms();
+  const toast = useToast();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingRoom, setEditingRoom] = useState(null);
+
+  useEffect(() => {
+    fetchRooms();
+  }, [fetchRooms]);
+
+  const handleEdit = (room) => {
+    setEditingRoom(room);
+    setModalOpen(true);
+  };
+
+  const handleAdd = () => {
+    setEditingRoom(null);
+    setModalOpen(true);
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await deleteRoom(id);
+      toast.success('Room deleted successfully');
+    } catch (error) {
+      handleApiError(error, toast);
+      throw error;
+    }
+  };
+
+  const handleModalClose = () => {
+    setModalOpen(false);
+    setEditingRoom(null);
+  };
+
+  const filteredRooms = rooms.filter(room =>
+    room.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-8 max-w-7xl">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="section-title">Rooms</h1>
+          <p className="section-sub">{rooms.length} rooms available</p>
+        </div>
+        <Button variant="primary" icon="add_circle" onClick={handleAdd}>
+          Add Room
+        </Button>
+      </div>
+
+      {rooms.length > 0 && (
+        <div className="relative">
+          <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline" style={{ fontSize: 18 }}>
+            search
+          </span>
+          <input
+            type="text"
+            placeholder="Search rooms..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="input-dark pl-12 w-full max-w-md"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface">
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+            </button>
+          )}
         </div>
       )}
+
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="card animate-pulse">
+              <div className="flex gap-4 items-start">
+                <LoadingSkeleton variant="avatar" />
+                <div className="flex-1 space-y-2">
+                  <LoadingSkeleton variant="title" className="w-3/4" />
+                  <LoadingSkeleton className="w-1/2" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : filteredRooms.length === 0 ? (
+        <div className="card flex flex-col items-center justify-center py-16 text-center">
+          <span className="material-symbols-outlined text-outline mb-4" style={{fontSize: 48}}>
+            {searchQuery ? 'search_off' : 'meeting_room'}
+          </span>
+          <p className="font-semibold text-on-surface-variant">
+            {searchQuery ? 'No rooms found' : 'No rooms yet'}
+          </p>
+          <p className="text-sm text-outline mt-1">
+            {searchQuery ? 'Try a different search term' : 'Click "Add Room" to get started'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredRooms.map(r => (
+            <RoomCard key={r.id} room={r} onEdit={handleEdit} onDelete={handleDelete} />
+          ))}
+        </div>
+      )}
+
+      <RoomFormModal isOpen={modalOpen} onClose={handleModalClose} room={editingRoom} onSuccess={fetchRooms} />
     </div>
   );
 }
