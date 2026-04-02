@@ -25,6 +25,7 @@ function AppLayout() {
       <ErrorBoundary>
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/teachers" element={<Teachers />} />
           <Route path="/rooms" element={<Rooms />} />
           <Route path="/subjects" element={<Subjects />} />

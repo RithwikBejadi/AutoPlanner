@@ -54,8 +54,8 @@ export default {
         "tertiary-fixed-dim": "#c7c6c6"
       },
       fontFamily: {
-        headline: ['Cal Sans', 'Inter', 'sans-serif'],
-        editorial: ['Cal Sans', 'Inter', 'sans-serif'],
+        headline: ['Space Grotesk', 'Inter', 'sans-serif'],
+        editorial: ['Space Grotesk', 'Inter', 'sans-serif'],
         body: ['Inter', 'sans-serif'],
         label: ['Inter', 'sans-serif']
       },

@@ -22,6 +22,20 @@ const oauth2Client = new OAuth2Client(
   GOOGLE_REDIRECT_URI
 );
 
+const getFrontendUrl = (): string => {
+  const explicitFrontendUrl = process.env.FRONTEND_URL?.trim();
+  if (explicitFrontendUrl) {
+    return explicitFrontendUrl.replace(/\/$/, '');
+  }
+
+  const configuredOrigins = (process.env.CORS_ORIGIN || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return (configuredOrigins[0] || 'http://localhost:3000').replace(/\/$/, '');
+};
+
 router.get('/google', (req: AuthRequest, res: Response) => {
   const authorizeUrl = oauth2Client.generateAuthUrl({
     access_type: 'offline',
@@ -85,12 +99,12 @@ router.get('/google/callback', async (req: AuthRequest, res: Response) => {
 
     res.cookie('auth_token', token, getCookieOptions(isProd));
 
-    const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:3000';
-    res.redirect(`${frontendUrl}/dashboard`);
+    const frontendUrl = getFrontendUrl();
+    res.redirect(frontendUrl);
   } catch (error) {
     console.error('OAuth callback error:', error);
     import('fs').then(fs => fs.appendFileSync('auth-error.log', '\n' + new Date().toISOString() + ': ' + (error instanceof Error ? error.stack : String(error))));
-    const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:3000';
+    const frontendUrl = getFrontendUrl();
     res.redirect(`${frontendUrl}/login?error=auth_failed`);
   }
 });
