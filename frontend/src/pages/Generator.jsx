@@ -18,11 +18,12 @@ export default function Generator() {
   const abortRef = useRef(false);
 
   useEffect(() => {
-    fetchTeachers();
-    fetchRooms();
-    fetchSubjects();
-    fetchClassGroups();
-    fetchTimeSlots();
+    // Always refresh setup data on generator screen to avoid stale cache lockouts.
+    fetchTeachers(true);
+    fetchRooms(true);
+    fetchSubjects(true);
+    fetchClassGroups(true);
+    fetchTimeSlots(true);
   }, [fetchTeachers, fetchRooms, fetchSubjects, fetchClassGroups, fetchTimeSlots]);
 
   const getReadinessErrors = () => {
@@ -38,27 +39,33 @@ export default function Generator() {
       (subject) => !teachers.some((teacher) => (teacher.subjectIds || []).includes(subject.id))
     );
     if (subjectsWithoutTeacher.length > 0) {
-      errors.push('Assign teachers to all subjects before generating');
+      const labels = subjectsWithoutTeacher.map((subject) => subject.code || subject.name).join(', ');
+      errors.push(`Assign at least one teacher to each subject: ${labels}`);
     }
 
     const teachersWithoutAvailability = teachers.filter(
       (teacher) => (teacher.timeSlotIds || []).length === 0 && (teacher.availability || []).length === 0
     );
     if (teachersWithoutAvailability.length > 0) {
-      errors.push('Assign at least one availability slot for every teacher');
+      const labels = teachersWithoutAvailability.map((teacher) => teacher.name).join(', ');
+      errors.push(`Assign at least one availability slot for: ${labels}`);
     }
 
     const classGroupsWithoutRooms = classGroups.filter(
       (classGroup) => !rooms.some((room) => room.capacity >= classGroup.studentCount)
     );
     if (classGroupsWithoutRooms.length > 0) {
-      errors.push('Increase room capacities or reduce class group sizes');
+      const labels = classGroupsWithoutRooms
+        .map((classGroup) => `${classGroup.name} (${classGroup.studentCount})`)
+        .join(', ');
+      errors.push(`No room has enough capacity for: ${labels}`);
     }
 
-    const hasLabSubjects = subjects.some((subject) => subject.requiresLab);
+    const labSubjects = subjects.filter((subject) => subject.requiresLab);
     const hasLabRooms = rooms.some((room) => room.hasLabEquipment);
-    if (hasLabSubjects && !hasLabRooms) {
-      errors.push('At least one lab room is required for lab subjects');
+    if (labSubjects.length > 0 && !hasLabRooms) {
+      const labels = labSubjects.map((subject) => subject.code || subject.name).join(', ');
+      errors.push(`At least one lab room is required for lab subjects: ${labels}`);
     }
 
     return errors;
@@ -228,6 +235,20 @@ export default function Generator() {
           )}
         </div>
       </div>
+
+      {!isGenerating && !isDone && readinessErrors.length > 0 && (
+        <div className="mb-8 bg-error-container border border-error/20 rounded-xl p-5">
+          <p className="text-sm font-semibold text-error mb-3">Generation is blocked until these are fixed:</p>
+          <div className="space-y-2">
+            {readinessErrors.map((error, index) => (
+              <div key={index} className="flex items-start gap-2 text-sm text-on-error-container">
+                <span className="material-symbols-outlined text-error" style={{ fontSize: 16 }}>warning</span>
+                <span>{error}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mb-12">
         <div className="flex justify-between items-end mb-4">

@@ -10,40 +10,107 @@ const userRepository = new PrismaUserRepository(prisma);
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
-const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || '';
 
-if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REDIRECT_URI) {
-  throw new Error('Google OAuth environment variables are not configured');
+if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+  throw new Error('Google OAuth client credentials are not configured');
 }
 
 const oauth2Client = new OAuth2Client(
   GOOGLE_CLIENT_ID,
-  GOOGLE_CLIENT_SECRET,
-  GOOGLE_REDIRECT_URI
+  GOOGLE_CLIENT_SECRET
 );
 
-const getFrontendUrl = (): string => {
-  const explicitFrontendUrl = process.env.FRONTEND_URL?.trim();
-  if (explicitFrontendUrl) {
-    return explicitFrontendUrl.replace(/\/$/, '');
-  }
+const stripTrailingSlash = (url: string): string => url.replace(/\/$/, '');
 
-  const configuredOrigins = (process.env.CORS_ORIGIN || '')
+const isLocalUrl = (value: string): boolean => /localhost|127\.0\.0\.1/i.test(value);
+
+const getConfiguredOrigins = (): string[] =>
+  (process.env.CORS_ORIGIN || '')
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
 
-  return (configuredOrigins[0] || 'http://localhost:3000').replace(/\/$/, '');
+const getRequestBaseUrl = (req: AuthRequest): string => {
+  const forwardedProtoHeader = req.headers['x-forwarded-proto'];
+  const forwardedHostHeader = req.headers['x-forwarded-host'];
+
+  const forwardedProto = Array.isArray(forwardedProtoHeader)
+    ? forwardedProtoHeader[0]
+    : forwardedProtoHeader;
+  const forwardedHost = Array.isArray(forwardedHostHeader)
+    ? forwardedHostHeader[0]
+    : forwardedHostHeader;
+
+  const rawProtocol = forwardedProto || req.protocol || 'http';
+  const rawHost = forwardedHost || req.get('host') || '';
+
+  const protocol =
+    rawProtocol
+      .split(',')
+      .map((part) => part.trim())
+      .find(Boolean) || 'http';
+  const host =
+    rawHost
+      .split(',')
+      .map((part) => part.trim())
+      .find(Boolean) || '';
+
+  if (!host) return '';
+  return `${protocol}://${host}`;
+};
+
+const getGoogleRedirectUri = (req: AuthRequest): string => {
+  const configuredRedirect = process.env.GOOGLE_REDIRECT_URI?.trim();
+  const requestBaseUrl = getRequestBaseUrl(req);
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  if (configuredRedirect) {
+    if (isProduction && isLocalUrl(configuredRedirect) && requestBaseUrl) {
+      return `${stripTrailingSlash(requestBaseUrl)}/api/auth/google/callback`;
+    }
+    return configuredRedirect;
+  }
+
+  if (requestBaseUrl) {
+    return `${stripTrailingSlash(requestBaseUrl)}/api/auth/google/callback`;
+  }
+
+  return 'http://localhost:4000/api/auth/google/callback';
+};
+
+const getFrontendUrl = (): string => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const explicitFrontendUrl = process.env.FRONTEND_URL?.trim();
+  const configuredOrigins = getConfiguredOrigins();
+
+  const candidates = [
+    ...(explicitFrontendUrl ? [explicitFrontendUrl] : []),
+    ...configuredOrigins,
+  ];
+
+  if (isProduction) {
+    const nonLocalCandidate = candidates.find((candidate) => !isLocalUrl(candidate));
+    if (nonLocalCandidate) return stripTrailingSlash(nonLocalCandidate);
+  }
+
+  const firstCandidate = candidates[0];
+  if (firstCandidate) {
+    return stripTrailingSlash(firstCandidate);
+  }
+
+  return 'http://localhost:3000';
 };
 
 router.get('/google', (req: AuthRequest, res: Response) => {
+  const redirectUri = getGoogleRedirectUri(req);
   const authorizeUrl = oauth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: [
       'https://www.googleapis.com/auth/userinfo.profile',
       'https://www.googleapis.com/auth/userinfo.email'
     ],
-    prompt: 'consent'
+    prompt: 'consent',
+    redirect_uri: redirectUri,
   });
 
   res.redirect(authorizeUrl);
@@ -60,7 +127,11 @@ router.get('/google/callback', async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const { tokens } = await oauth2Client.getToken(code);
+    const redirectUri = getGoogleRedirectUri(req);
+    const { tokens } = await oauth2Client.getToken({
+      code,
+      redirect_uri: redirectUri,
+    });
     oauth2Client.setCredentials(tokens);
 
     const ticket = await oauth2Client.verifyIdToken({
