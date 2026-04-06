@@ -1,7 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import ThemeToggle from './ui/ThemeToggle';
 
 const menuEntities = [
   { to: '/teachers', label: 'Teachers', icon: 'person' },
@@ -60,10 +59,6 @@ export default function Layout({ children }) {
             </nav>
           </div>
           <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <button className="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">notifications</button>
-            <button className="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">settings</button>
-            
             {user && (
               <div className="relative group cursor-pointer">
                 <div className="w-8 h-8 rounded-full bg-surface-container-high overflow-hidden border border-outline-variant/20">

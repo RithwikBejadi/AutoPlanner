@@ -4,6 +4,16 @@ import * as api from '../api';
 
 const AuthContext = createContext(null);
 
+const normalizePath = (pathname = '') => {
+  const trimmed = pathname.replace(/\/+$/, '');
+  return trimmed || '/';
+};
+
+const isPublicAuthPath = (pathname) => {
+  const normalized = normalizePath(pathname);
+  return normalized === '/login' || normalized === '/signup';
+};
+
 export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
@@ -16,7 +26,7 @@ export const AuthProvider = ({ children }) => {
       setError(null);
       const userData = await api.getCurrentUser();
       
-      if (!userData && window.location.pathname !== '/login') {
+      if (!userData && !isPublicAuthPath(window.location.pathname)) {
         const params = new URLSearchParams(window.location.search);
         const oauthError = params.get('error');
         const loginPath = oauthError ? `/login?error=${encodeURIComponent(oauthError)}` : '/login';
@@ -30,7 +40,7 @@ export const AuthProvider = ({ children }) => {
         setError(err.message);
       }
       setUser(null);
-      if (window.location.pathname !== '/login') {
+      if (!isPublicAuthPath(window.location.pathname)) {
         navigate('/login', { replace: true });
       }
     } finally {

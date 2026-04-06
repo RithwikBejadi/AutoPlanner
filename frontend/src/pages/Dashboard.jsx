@@ -49,7 +49,7 @@ export default function Dashboard() {
           <h1 className="text-4xl font-headline tracking-tight text-primary">Dashboard</h1>
           <p className="text-on-surface-variant text-sm max-w-md mt-2">Manage your institutional assets and generate optimized schedules in seconds.</p>
         </div>
-        <Link to="/timetable/generate" className="bg-primary text-on-primary-fixed px-5 py-2.5 rounded-lg font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-all text-sm w-fit">
+        <Link to="/timetable/generate" className="bg-primary text-on-primary px-5 py-2.5 rounded-lg font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-all text-sm w-fit">
           <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
           Generate New Timetable
         </Link>

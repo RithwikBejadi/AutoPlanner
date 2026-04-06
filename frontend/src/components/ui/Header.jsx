@@ -52,13 +52,6 @@ export default function Header({ user, onLogout, hideNav = false }) {
         
         {user && (
           <div className="flex items-center gap-4">
-            <button className="material-symbols-outlined text-gray-500 hover:text-black dark:hover:text-white transition-colors">
-              notifications
-            </button>
-            <button className="material-symbols-outlined text-gray-500 hover:text-black dark:hover:text-white transition-colors">
-              settings
-            </button>
-            
             <div className="relative group cursor-pointer">
               <div className="w-8 h-8 rounded-full bg-surface-container-high overflow-hidden border border-outline-variant/20">
                 {user.picture ? (

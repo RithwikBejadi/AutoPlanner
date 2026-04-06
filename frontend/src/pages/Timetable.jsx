@@ -6,14 +6,14 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
 // Color palette for subjects
 const SUBJECT_COLORS = [
-  'bg-primary/20 text-primary border border-primary/30',
-  'bg-secondary/20 text-secondary border border-secondary/30',
-  'bg-tertiary/20 text-tertiary border border-tertiary/30',
-  'bg-indigo-400/20 text-indigo-300 border border-indigo-400/30',
-  'bg-cyan-400/20 text-cyan-300 border border-cyan-400/30',
-  'bg-teal-400/20 text-teal-300 border border-teal-400/30',
-  'bg-violet-400/20 text-violet-300 border border-violet-400/30',
-  'bg-fuchsia-400/20 text-fuchsia-300 border border-fuchsia-400/30',
+  'bg-slate-100 text-slate-900 border border-slate-300',
+  'bg-indigo-100 text-indigo-900 border border-indigo-300',
+  'bg-cyan-100 text-cyan-900 border border-cyan-300',
+  'bg-teal-100 text-teal-900 border border-teal-300',
+  'bg-violet-100 text-violet-900 border border-violet-300',
+  'bg-fuchsia-100 text-fuchsia-900 border border-fuchsia-300',
+  'bg-emerald-100 text-emerald-900 border border-emerald-300',
+  'bg-amber-100 text-amber-900 border border-amber-300',
 ];
 
 const getSubjectColor = (name) => {
@@ -69,17 +69,17 @@ function ScheduleGrid({ entries }) {
                           <div key={e.id} className={`p-3 rounded-xl flex flex-col gap-2 shadow-sm animate-fade-in ${getSubjectColor(e.subject.name)}`}>
                             <div className="flex justify-between items-start gap-2">
                               <span className="font-bold text-xs uppercase tracking-wider leading-tight">{e.subject.code}</span>
-                              <span className="text-[10px] font-semibold bg-surface-container/30 px-1.5 py-0.5 rounded backdrop-blur-sm">{e.room.name}</span>
+                              <span className="text-[10px] font-semibold bg-white/75 text-on-surface px-1.5 py-0.5 rounded backdrop-blur-sm">{e.room.name}</span>
                             </div>
                             <div>
                               <p className="text-sm font-semibold font-headline leading-tight mt-1 truncate">{e.subject.name}</p>
-                              <div className="flex items-center gap-1.5 mt-2 opacity-90">
+                              <div className="flex items-center gap-1.5 mt-2">
                                 <span className="material-symbols-outlined" style={{fontSize: 14}}>person</span>
-                                <span className="text-[10px] font-medium truncate">{e.teacher.name}</span>
+                                <span className="text-[10px] font-semibold truncate">{e.teacher.name}</span>
                               </div>
-                              <div className="flex items-center gap-1.5 mt-1 opacity-90">
+                              <div className="flex items-center gap-1.5 mt-1">
                                 <span className="material-symbols-outlined" style={{fontSize: 14}}>groups</span>
-                                <span className="text-[10px] font-medium truncate">{e.classGroup.name}</span>
+                                <span className="text-[10px] font-semibold truncate">{e.classGroup.name}</span>
                               </div>
                             </div>
                           </div>
@@ -215,7 +215,7 @@ export default function Timetable() {
               onClick={() => { setFilterType(t); setSelectedId(''); }}
               className={`px-4 py-2 rounded-xl text-xs font-bold capitalize transition-all shrink-0 ${
                 filterType === t 
-                  ? 'bg-primary text-on-primary-fixed shadow-[0_0_15px_rgba(196,193,251,0.3)]' 
+                  ? 'bg-primary text-on-primary shadow-[0_0_15px_rgba(196,193,251,0.3)]' 
                   : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest border border-outline-variant/10'
               }`}
             >
