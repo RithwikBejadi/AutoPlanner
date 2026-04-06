@@ -211,12 +211,9 @@ router.get('/me', optionalAuth, async (req: AuthRequest, res: Response) => {
 });
 
 router.post('/logout', (req: AuthRequest, res: Response) => {
-  res.clearCookie('auth_token', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/'
-  });
+  const isProd = process.env.NODE_ENV === 'production';
+  const { maxAge: _maxAge, ...cookieOptions } = getCookieOptions(isProd);
+  res.clearCookie('auth_token', cookieOptions);
 
   res.json({ message: 'Logged out successfully' });
 });
