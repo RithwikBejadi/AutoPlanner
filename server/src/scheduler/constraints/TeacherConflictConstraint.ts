@@ -1,11 +1,15 @@
-import type { IConstraint, ConstraintContext, ConstraintResult } from './Constraint.js';
+import type {
+  IConstraint,
+  ConstraintContext,
+  ConstraintResult,
+} from "./Constraint.js";
 
 export class TeacherConflictConstraint implements IConstraint {
-  readonly name = 'TeacherConflictConstraint';
+  readonly name = "TeacherConflictConstraint";
 
   check(ctx: ConstraintContext): ConstraintResult {
     const conflict = ctx.scheduledEntries.find(
-      entry =>
+      (entry) =>
         entry.getTeacher().getId() === ctx.teacher.getId() &&
         entry.getTimeSlot().overlapsWith(ctx.timeSlot),
     );

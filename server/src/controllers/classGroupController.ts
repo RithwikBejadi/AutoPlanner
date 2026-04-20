@@ -1,31 +1,30 @@
-import type { Response } from 'express';
-import type { AuthRequest } from '../middleware/auth.js';
-import { PrismaClassGroupRepository } from '../repositories/implementations/PrismaClassGroupRepository.js';
-import { ClassGroup } from '../domain/entities/ClassGroup.js';
-import { randomUUID } from 'crypto';
+import type { Response } from "express";
+import type { AuthRequest } from "../middleware/auth.js";
+import { PrismaClassGroupRepository } from "../repositories/implementations/PrismaClassGroupRepository.js";
+import { ClassGroup } from "../domain/entities/ClassGroup.js";
+import { randomUUID } from "crypto";
 
 const classGroupRepo = new PrismaClassGroupRepository();
 
 export class ClassGroupController {
-  
   async getAll(req: AuthRequest, res: Response): Promise<void> {
     try {
       const userId = req.user!.id;
       const classGroups = await classGroupRepo.findAllByUserId(userId);
-      
+
       res.json({
         success: true,
-        data: classGroups.map(cg => ({
+        data: classGroups.map((cg) => ({
           id: cg.getId(),
           name: cg.getName(),
-          studentCount: cg.getStudentCount()
-        }))
+          studentCount: cg.getStudentCount(),
+        })),
       });
     } catch (error) {
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch class groups',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: "Failed to fetch class groups",
+        message: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }
@@ -34,21 +33,21 @@ export class ClassGroupController {
     try {
       const { id } = req.params;
       const userId = req.user!.id;
-      
-      if (!id || typeof id !== 'string') {
+
+      if (!id || typeof id !== "string") {
         res.status(400).json({
           success: false,
-          error: 'ClassGroup ID is required'
+          error: "ClassGroup ID is required",
         });
         return;
       }
 
       const classGroup = await classGroupRepo.findByIdAndUserId(id, userId);
-      
+
       if (!classGroup) {
         res.status(404).json({
           success: false,
-          error: 'ClassGroup not found'
+          error: "ClassGroup not found",
         });
         return;
       }
@@ -58,14 +57,14 @@ export class ClassGroupController {
         data: {
           id: classGroup.getId(),
           name: classGroup.getName(),
-          studentCount: classGroup.getStudentCount()
-        }
+          studentCount: classGroup.getStudentCount(),
+        },
       });
     } catch (error) {
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch class group',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: "Failed to fetch class group",
+        message: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }
@@ -80,7 +79,7 @@ export class ClassGroupController {
       if (!name || !Number.isFinite(normalizedStudentCount)) {
         res.status(400).json({
           success: false,
-          error: 'Missing or invalid required fields: name, studentCount'
+          error: "Missing or invalid required fields: name, studentCount",
         });
         return;
       }
@@ -88,7 +87,7 @@ export class ClassGroupController {
       const classGroup = new ClassGroup(
         randomUUID(),
         name,
-        normalizedStudentCount
+        normalizedStudentCount,
       );
 
       const created = await classGroupRepo.create(classGroup, userId);
@@ -98,14 +97,14 @@ export class ClassGroupController {
         data: {
           id: created.getId(),
           name: created.getName(),
-          studentCount: created.getStudentCount()
-        }
+          studentCount: created.getStudentCount(),
+        },
       });
     } catch (error) {
       res.status(400).json({
         success: false,
-        error: 'Failed to create class group',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: "Failed to create class group",
+        message: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }
@@ -118,10 +117,10 @@ export class ClassGroupController {
 
       const normalizedStudentCount = Number(studentCount);
 
-      if (!id || typeof id !== 'string') {
+      if (!id || typeof id !== "string") {
         res.status(400).json({
           success: false,
-          error: 'ClassGroup ID is required'
+          error: "ClassGroup ID is required",
         });
         return;
       }
@@ -130,7 +129,7 @@ export class ClassGroupController {
       if (!exists) {
         res.status(404).json({
           success: false,
-          error: 'ClassGroup not found'
+          error: "ClassGroup not found",
         });
         return;
       }
@@ -138,7 +137,7 @@ export class ClassGroupController {
       if (!name || !Number.isFinite(normalizedStudentCount)) {
         res.status(400).json({
           success: false,
-          error: 'Missing or invalid required fields: name, studentCount'
+          error: "Missing or invalid required fields: name, studentCount",
         });
         return;
       }
@@ -151,14 +150,14 @@ export class ClassGroupController {
         data: {
           id: updated.getId(),
           name: updated.getName(),
-          studentCount: updated.getStudentCount()
-        }
+          studentCount: updated.getStudentCount(),
+        },
       });
     } catch (error) {
       res.status(400).json({
         success: false,
-        error: 'Failed to update class group',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: "Failed to update class group",
+        message: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }
@@ -168,24 +167,26 @@ export class ClassGroupController {
       const { id } = req.params;
       const userId = req.user!.id;
 
-      if (!id || typeof id !== 'string') {
-        res.status(400).json({ success: false, error: 'ClassGroup ID is required' });
+      if (!id || typeof id !== "string") {
+        res
+          .status(400)
+          .json({ success: false, error: "ClassGroup ID is required" });
         return;
       }
 
       const exists = await classGroupRepo.existsByIdAndUserId(id, userId);
       if (!exists) {
-        res.status(404).json({ success: false, error: 'ClassGroup not found' });
+        res.status(404).json({ success: false, error: "ClassGroup not found" });
         return;
       }
 
       await classGroupRepo.deleteByIdAndUserId(id, userId);
-      res.json({ success: true, message: 'ClassGroup deleted successfully' });
+      res.json({ success: true, message: "ClassGroup deleted successfully" });
     } catch (error) {
       res.status(500).json({
         success: false,
-        error: 'Failed to delete class group',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: "Failed to delete class group",
+        message: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }

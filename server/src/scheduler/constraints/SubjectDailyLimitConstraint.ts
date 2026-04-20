@@ -1,15 +1,20 @@
-import type { IConstraint, ConstraintContext, ConstraintResult } from './Constraint.js';
+import type {
+  IConstraint,
+  ConstraintContext,
+  ConstraintResult,
+} from "./Constraint.js";
 
 export class SubjectDailyLimitConstraint implements IConstraint {
-  readonly name = 'SubjectDailyLimitConstraint';
+  readonly name = "SubjectDailyLimitConstraint";
 
   check(ctx: ConstraintContext): ConstraintResult {
     const maxPerDay = ctx.subject.getMaxSessionsPerDay();
 
-    const sessionsAlreadyScheduledToday = ctx.scheduledEntries.filter((entry) =>
-      entry.getClassGroup().getId() === ctx.classGroup.getId() &&
-      entry.getSubject().getId() === ctx.subject.getId() &&
-      entry.getTimeSlot().getDay() === ctx.timeSlot.getDay()
+    const sessionsAlreadyScheduledToday = ctx.scheduledEntries.filter(
+      (entry) =>
+        entry.getClassGroup().getId() === ctx.classGroup.getId() &&
+        entry.getSubject().getId() === ctx.subject.getId() &&
+        entry.getTimeSlot().getDay() === ctx.timeSlot.getDay(),
     ).length;
 
     if (sessionsAlreadyScheduledToday >= maxPerDay) {

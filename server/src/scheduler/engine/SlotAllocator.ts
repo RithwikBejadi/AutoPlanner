@@ -1,22 +1,22 @@
-import { randomUUID } from 'crypto';
-import { ScheduleEntry } from '../../domain/entities/ScheduleEntry.js';
-import type { Teacher } from '../../domain/entities/Teacher.js';
-import type { Room } from '../../domain/entities/Room.js';
-import type { Subject } from '../../domain/entities/Subject.js';
-import type { ClassGroup } from '../../domain/entities/ClassGroup.js';
-import type { TimeSlot } from '../../domain/entities/TimeSlot.js';
-import { ConstraintValidator } from '../validator/ConstraintValidator.js';
-import type { ConstraintContext } from '../constraints/Constraint.js';
+import { randomUUID } from "crypto";
+import { ScheduleEntry } from "../../domain/entities/ScheduleEntry.js";
+import type { Teacher } from "../../domain/entities/Teacher.js";
+import type { Room } from "../../domain/entities/Room.js";
+import type { Subject } from "../../domain/entities/Subject.js";
+import type { ClassGroup } from "../../domain/entities/ClassGroup.js";
+import type { TimeSlot } from "../../domain/entities/TimeSlot.js";
+import { ConstraintValidator } from "../validator/ConstraintValidator.js";
+import type { ConstraintContext } from "../constraints/Constraint.js";
 
 export interface SchedulingTask {
   readonly subject: Subject;
   readonly classGroup: ClassGroup;
-    readonly sessionIndex: number;
+  readonly sessionIndex: number;
 }
 
 export interface AllocationResult {
   readonly entry: ScheduleEntry | null;
-    readonly failureReason?: string;
+  readonly failureReason?: string;
 }
 
 export class SlotAllocator {
@@ -26,7 +26,7 @@ export class SlotAllocator {
     this.validator = validator ?? new ConstraintValidator();
   }
 
-    allocate(
+  allocate(
     task: SchedulingTask,
     teachers: Teacher[],
     rooms: Room[],
@@ -35,8 +35,7 @@ export class SlotAllocator {
   ): AllocationResult {
     const { subject, classGroup } = task;
 
-    
-    const qualifiedTeachers = teachers.filter(t =>
+    const qualifiedTeachers = teachers.filter((t) =>
       t.isQualifiedFor(subject.getId()),
     );
 
@@ -47,8 +46,7 @@ export class SlotAllocator {
       };
     }
 
-    
-    const suitableRooms = rooms.filter(r => r.canHostSubject(subject));
+    const suitableRooms = rooms.filter((r) => r.canHostSubject(subject));
 
     if (suitableRooms.length === 0) {
       return {
@@ -59,7 +57,6 @@ export class SlotAllocator {
 
     let lastReason: string | undefined;
 
-    
     for (const timeSlot of timeSlots) {
       for (const teacher of qualifiedTeachers) {
         for (const room of suitableRooms) {
@@ -72,7 +69,7 @@ export class SlotAllocator {
             timeSlot,
           };
 
-          const result = this.validator.validate(ctx,  true);
+          const result = this.validator.validate(ctx, true);
 
           if (result.valid) {
             try {
@@ -86,13 +83,13 @@ export class SlotAllocator {
               );
               return { entry };
             } catch (err) {
-              
-              
               lastReason =
-                err instanceof Error ? err.message : 'ScheduleEntry validation failed';
+                err instanceof Error
+                  ? err.message
+                  : "ScheduleEntry validation failed";
             }
           } else {
-            lastReason = result.violations[0]?.reason ?? 'Constraint violated';
+            lastReason = result.violations[0]?.reason ?? "Constraint violated";
           }
         }
       }

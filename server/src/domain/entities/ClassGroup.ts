@@ -16,7 +16,7 @@ export class ClassGroup implements ClassGroupInterface {
     id: string,
     name: string,
     studentCount: number,
-    subjects: string[] = []
+    subjects: string[] = [],
   ) {
     if (!id || id.trim() === "") {
       throw new Error("ClassGroup ID cannot be empty");

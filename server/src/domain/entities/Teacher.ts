@@ -32,7 +32,7 @@ export class Teacher implements TeacherInterface {
     if (qualifiedSubjects.some((id) => !id || id.trim() === "")) {
       throw new Error("Subject IDs cannot be empty");
     }
-    
+
     if (!availability || availability.length === 0) {
       throw new Error("Teacher must have availability information");
     }

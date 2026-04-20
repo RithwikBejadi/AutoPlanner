@@ -1,24 +1,27 @@
-import type { IConstraint, ConstraintContext, ConstraintResult } from '../constraints/Constraint.js';
-import { TeacherAvailabilityConstraint } from '../constraints/TeacherAvailabilityConstraint.js';
-import { TeacherConflictConstraint } from '../constraints/TeacherConflictConstraint.js';
-import { RoomCapacityConstraint } from '../constraints/RoomCapacityConstraint.js';
-import { RoomConflictConstraint } from '../constraints/RoomConflictConstraint.js';
-import { ClassConflictConstraint } from '../constraints/ClassConflictConstraint.js';
-import { SubjectDailyLimitConstraint } from '../constraints/SubjectDailyLimitConstraint.js';
+import type {
+  IConstraint,
+  ConstraintContext,
+  ConstraintResult,
+} from "../constraints/Constraint.js";
+import { TeacherAvailabilityConstraint } from "../constraints/TeacherAvailabilityConstraint.js";
+import { TeacherConflictConstraint } from "../constraints/TeacherConflictConstraint.js";
+import { RoomCapacityConstraint } from "../constraints/RoomCapacityConstraint.js";
+import { RoomConflictConstraint } from "../constraints/RoomConflictConstraint.js";
+import { ClassConflictConstraint } from "../constraints/ClassConflictConstraint.js";
+import { SubjectDailyLimitConstraint } from "../constraints/SubjectDailyLimitConstraint.js";
 
 export interface ValidationResult {
   readonly valid: boolean;
-    readonly violations: ConstraintResult[];
-    readonly results: ConstraintResult[];
+  readonly violations: ConstraintResult[];
+  readonly results: ConstraintResult[];
 }
 
 export class ConstraintValidator {
   private readonly constraints: IConstraint[];
 
   constructor(extraConstraints: IConstraint[] = []) {
-    
     this.constraints = [
-      new TeacherAvailabilityConstraint(), 
+      new TeacherAvailabilityConstraint(),
       new SubjectDailyLimitConstraint(),
       new TeacherConflictConstraint(),
       new RoomCapacityConstraint(),
@@ -28,7 +31,7 @@ export class ConstraintValidator {
     ];
   }
 
-    validate(ctx: ConstraintContext, failFast = true): ValidationResult {
+  validate(ctx: ConstraintContext, failFast = true): ValidationResult {
     const results: ConstraintResult[] = [];
     const violations: ConstraintResult[] = [];
 
@@ -39,7 +42,6 @@ export class ConstraintValidator {
       if (!result.satisfied) {
         violations.push(result);
         if (failFast) {
-          
           return { valid: false, violations, results };
         }
       }
@@ -52,11 +54,11 @@ export class ConstraintValidator {
     };
   }
 
-    isValid(ctx: ConstraintContext): boolean {
+  isValid(ctx: ConstraintContext): boolean {
     return this.validate(ctx, true).valid;
   }
 
-    getConstraintNames(): string[] {
-    return this.constraints.map(c => c.name);
+  getConstraintNames(): string[] {
+    return this.constraints.map((c) => c.name);
   }
 }

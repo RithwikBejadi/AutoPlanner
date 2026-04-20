@@ -1,12 +1,16 @@
-import type { IConstraint, ConstraintContext, ConstraintResult } from './Constraint.js';
+import type {
+  IConstraint,
+  ConstraintContext,
+  ConstraintResult,
+} from "./Constraint.js";
 
 export class TeacherAvailabilityConstraint implements IConstraint {
-  readonly name = 'TeacherAvailabilityConstraint';
+  readonly name = "TeacherAvailabilityConstraint";
 
   check(ctx: ConstraintContext): ConstraintResult {
     const available = ctx.teacher
       .getAvailability()
-      .some(slot => slot.equals(ctx.timeSlot));
+      .some((slot) => slot.equals(ctx.timeSlot));
 
     if (available) {
       return { satisfied: true, constraintName: this.name };

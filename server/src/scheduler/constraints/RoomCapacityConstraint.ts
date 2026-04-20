@@ -1,10 +1,13 @@
-import type { IConstraint, ConstraintContext, ConstraintResult } from './Constraint.js';
+import type {
+  IConstraint,
+  ConstraintContext,
+  ConstraintResult,
+} from "./Constraint.js";
 
 export class RoomCapacityConstraint implements IConstraint {
-  readonly name = 'RoomCapacityConstraint';
+  readonly name = "RoomCapacityConstraint";
 
   check(ctx: ConstraintContext): ConstraintResult {
-    
     if (!ctx.room.canAccommodate(ctx.classGroup.getStudentCount())) {
       return {
         satisfied: false,
@@ -15,7 +18,6 @@ export class RoomCapacityConstraint implements IConstraint {
       };
     }
 
-    
     if (ctx.subject.requiresLab() && !ctx.room.hasLabEquipment()) {
       return {
         satisfied: false,

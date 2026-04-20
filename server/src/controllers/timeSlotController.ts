@@ -1,46 +1,45 @@
-import type { Response } from 'express';
-import type { AuthRequest } from '../middleware/auth.js';
-import { PrismaTimeSlotRepository } from '../repositories/implementations/PrismaTimeSlotRepository.js';
-import { TimeSlot } from '../domain/entities/TimeSlot.js';
+import type { Response } from "express";
+import type { AuthRequest } from "../middleware/auth.js";
+import { PrismaTimeSlotRepository } from "../repositories/implementations/PrismaTimeSlotRepository.js";
+import { TimeSlot } from "../domain/entities/TimeSlot.js";
 
 const timeSlotRepo = new PrismaTimeSlotRepository();
 
 const formatTime = (date: Date): string => {
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
   return `${hours}:${minutes}`;
 };
 
 const parseTime = (timeStr: string): Date => {
-  const parts = timeStr.split(':');
-  const hours = parseInt(parts[0] || '0', 10);
-  const minutes = parseInt(parts[1] || '0', 10);
+  const parts = timeStr.split(":");
+  const hours = parseInt(parts[0] || "0", 10);
+  const minutes = parseInt(parts[1] || "0", 10);
   const date = new Date();
   date.setHours(hours, minutes, 0, 0);
   return date;
 };
 
 export class TimeSlotController {
-  
   async getAll(req: AuthRequest, res: Response): Promise<void> {
     try {
       const userId = req.user!.id;
       const timeSlots = await timeSlotRepo.findAllByUserId(userId);
-      
+
       res.json({
         success: true,
-        data: timeSlots.map(ts => ({
+        data: timeSlots.map((ts) => ({
           id: ts.getId(),
           day: ts.getDay(),
           startTime: formatTime(ts.getStartTime()),
-          endTime: formatTime(ts.getEndTime())
-        }))
+          endTime: formatTime(ts.getEndTime()),
+        })),
       });
     } catch (error) {
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch time slots',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: "Failed to fetch time slots",
+        message: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }
@@ -49,21 +48,21 @@ export class TimeSlotController {
     try {
       const { id } = req.params;
       const userId = req.user!.id;
-      
-      if (!id || typeof id !== 'string') {
+
+      if (!id || typeof id !== "string") {
         res.status(400).json({
           success: false,
-          error: 'TimeSlot ID is required'
+          error: "TimeSlot ID is required",
         });
         return;
       }
 
       const timeSlot = await timeSlotRepo.findByIdAndUserId(id, userId);
-      
+
       if (!timeSlot) {
         res.status(404).json({
           success: false,
-          error: 'TimeSlot not found'
+          error: "TimeSlot not found",
         });
         return;
       }
@@ -74,14 +73,14 @@ export class TimeSlotController {
           id: timeSlot.getId(),
           day: timeSlot.getDay(),
           startTime: formatTime(timeSlot.getStartTime()),
-          endTime: formatTime(timeSlot.getEndTime())
-        }
+          endTime: formatTime(timeSlot.getEndTime()),
+        },
       });
     } catch (error) {
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch time slot',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: "Failed to fetch time slot",
+        message: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }
@@ -90,33 +89,33 @@ export class TimeSlotController {
     try {
       const { day } = req.params;
       const userId = req.user!.id;
-      
-      if (!day || typeof day !== 'string') {
+
+      if (!day || typeof day !== "string") {
         res.status(400).json({
           success: false,
-          error: 'Day is required'
+          error: "Day is required",
         });
         return;
       }
 
       const timeSlots = (await timeSlotRepo.findAllByUserId(userId)).filter(
-        (ts) => ts.getDay() === day
+        (ts) => ts.getDay() === day,
       );
 
       res.json({
         success: true,
-        data: timeSlots.map(ts => ({
+        data: timeSlots.map((ts) => ({
           id: ts.getId(),
           day: ts.getDay(),
           startTime: formatTime(ts.getStartTime()),
-          endTime: formatTime(ts.getEndTime())
-        }))
+          endTime: formatTime(ts.getEndTime()),
+        })),
       });
     } catch (error) {
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch time slots by day',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: "Failed to fetch time slots by day",
+        message: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }
@@ -129,7 +128,7 @@ export class TimeSlotController {
       if (!day || !startTime || !endTime) {
         res.status(400).json({
           success: false,
-          error: 'Missing required fields: day, startTime, endTime'
+          error: "Missing required fields: day, startTime, endTime",
         });
         return;
       }
@@ -137,7 +136,7 @@ export class TimeSlotController {
       const timeSlot = new TimeSlot(
         day,
         parseTime(startTime),
-        parseTime(endTime)
+        parseTime(endTime),
       );
 
       const created = await timeSlotRepo.create(timeSlot, userId);
@@ -148,14 +147,14 @@ export class TimeSlotController {
           id: created.getId(),
           day: created.getDay(),
           startTime: formatTime(created.getStartTime()),
-          endTime: formatTime(created.getEndTime())
-        }
+          endTime: formatTime(created.getEndTime()),
+        },
       });
     } catch (error) {
       res.status(400).json({
         success: false,
-        error: 'Failed to create time slot',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: "Failed to create time slot",
+        message: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }
@@ -166,26 +165,33 @@ export class TimeSlotController {
       const { day, startTime, endTime } = req.body;
       const userId = req.user!.id;
 
-      if (!id || typeof id !== 'string') {
-        res.status(400).json({ success: false, error: 'TimeSlot ID is required' });
+      if (!id || typeof id !== "string") {
+        res
+          .status(400)
+          .json({ success: false, error: "TimeSlot ID is required" });
         return;
       }
 
       if (!day || !startTime || !endTime) {
         res.status(400).json({
           success: false,
-          error: 'Missing required fields: day, startTime, endTime'
+          error: "Missing required fields: day, startTime, endTime",
         });
         return;
       }
 
       const exists = await timeSlotRepo.existsByIdAndUserId(id, userId);
       if (!exists) {
-        res.status(404).json({ success: false, error: 'TimeSlot not found' });
+        res.status(404).json({ success: false, error: "TimeSlot not found" });
         return;
       }
 
-      const timeSlot = new TimeSlot(day, parseTime(startTime), parseTime(endTime), id);
+      const timeSlot = new TimeSlot(
+        day,
+        parseTime(startTime),
+        parseTime(endTime),
+        id,
+      );
       const updated = await timeSlotRepo.update(id, timeSlot);
 
       res.json({
@@ -194,14 +200,14 @@ export class TimeSlotController {
           id: updated.getId(),
           day: updated.getDay(),
           startTime: formatTime(updated.getStartTime()),
-          endTime: formatTime(updated.getEndTime())
-        }
+          endTime: formatTime(updated.getEndTime()),
+        },
       });
     } catch (error) {
       res.status(400).json({
         success: false,
-        error: 'Failed to update time slot',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: "Failed to update time slot",
+        message: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }
@@ -211,24 +217,26 @@ export class TimeSlotController {
       const { id } = req.params;
       const userId = req.user!.id;
 
-      if (!id || typeof id !== 'string') {
-        res.status(400).json({ success: false, error: 'TimeSlot ID is required' });
+      if (!id || typeof id !== "string") {
+        res
+          .status(400)
+          .json({ success: false, error: "TimeSlot ID is required" });
         return;
       }
 
       const exists = await timeSlotRepo.existsByIdAndUserId(id, userId);
       if (!exists) {
-        res.status(404).json({ success: false, error: 'TimeSlot not found' });
+        res.status(404).json({ success: false, error: "TimeSlot not found" });
         return;
       }
 
       await timeSlotRepo.deleteByIdAndUserId(id, userId);
-      res.json({ success: true, message: 'TimeSlot deleted successfully' });
+      res.json({ success: true, message: "TimeSlot deleted successfully" });
     } catch (error) {
       res.status(500).json({
         success: false,
-        error: 'Failed to delete time slot',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: "Failed to delete time slot",
+        message: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }

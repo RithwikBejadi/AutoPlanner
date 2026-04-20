@@ -1,7 +1,8 @@
 import { TimeSlot } from "./TimeSlot.js";
 import type { ScheduleEntry } from "./ScheduleEntry.js";
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 interface TimetableInterface {
   getId(): string;
@@ -14,7 +15,10 @@ interface TimetableInterface {
   findEntriesByClassGroup(classGroupId: string): ScheduleEntry[];
   findEntriesByRoom(roomId: string): ScheduleEntry[];
   findEntriesBySubject(subjectId: string): ScheduleEntry[];
-  findEntriesByRoomAndTimeSlot(roomId: string, timeSlot: TimeSlot): ScheduleEntry[];
+  findEntriesByRoomAndTimeSlot(
+    roomId: string,
+    timeSlot: TimeSlot,
+  ): ScheduleEntry[];
   hasConflicts(): boolean;
   isValid(): boolean;
   clear(): void;
@@ -62,7 +66,6 @@ export class Timetable implements TimetableInterface {
       throw new Error("ScheduleEntry cannot be null");
     }
 
-    
     const conflictMessage = this.getConflictMessage(entry);
     if (conflictMessage) {
       throw new Error(conflictMessage);
@@ -74,33 +77,43 @@ export class Timetable implements TimetableInterface {
 
   removeEntry(entryId: string): void {
     const beforeLength = this._entries.length;
-    this._entries = this._entries.filter(entry => entry.getId() !== entryId);
-    
-    
+    this._entries = this._entries.filter((entry) => entry.getId() !== entryId);
+
     if (this._entries.length !== beforeLength) {
       this._updatedAt = new Date();
     }
   }
 
   findEntriesByTeacher(teacherId: string): ScheduleEntry[] {
-    return this._entries.filter(entry => entry.getTeacher().getId() === teacherId);
+    return this._entries.filter(
+      (entry) => entry.getTeacher().getId() === teacherId,
+    );
   }
 
   findEntriesByClassGroup(classGroupId: string): ScheduleEntry[] {
-    return this._entries.filter(entry => entry.getClassGroup().getId() === classGroupId);
+    return this._entries.filter(
+      (entry) => entry.getClassGroup().getId() === classGroupId,
+    );
   }
 
   findEntriesByRoom(roomId: string): ScheduleEntry[] {
-    return this._entries.filter(entry => entry.getRoom().getId() === roomId);
+    return this._entries.filter((entry) => entry.getRoom().getId() === roomId);
   }
 
   findEntriesBySubject(subjectId: string): ScheduleEntry[] {
-    return this._entries.filter(entry => entry.getSubject().getId() === subjectId);
+    return this._entries.filter(
+      (entry) => entry.getSubject().getId() === subjectId,
+    );
   }
 
-  findEntriesByRoomAndTimeSlot(roomId: string, timeSlot: TimeSlot): ScheduleEntry[] {
-    return this._entries.filter(entry => 
-      entry.getRoom().getId() === roomId && entry.getTimeSlot().equals(timeSlot)
+  findEntriesByRoomAndTimeSlot(
+    roomId: string,
+    timeSlot: TimeSlot,
+  ): ScheduleEntry[] {
+    return this._entries.filter(
+      (entry) =>
+        entry.getRoom().getId() === roomId &&
+        entry.getTimeSlot().equals(timeSlot),
     );
   }
 
@@ -148,7 +161,9 @@ export class Timetable implements TimetableInterface {
 
   private getConflictMessage(newEntry: ScheduleEntry): string | null {
     for (const existing of this._entries) {
-      const timeOverlap = existing.getTimeSlot().overlapsWith(newEntry.getTimeSlot());
+      const timeOverlap = existing
+        .getTimeSlot()
+        .overlapsWith(newEntry.getTimeSlot());
       if (!timeOverlap) continue;
 
       const time = newEntry.getTimeSlot().toString();
@@ -161,7 +176,9 @@ export class Timetable implements TimetableInterface {
         return `Cannot add entry: Room '${newEntry.getRoom().getName()}' is already occupied at ${time}`;
       }
 
-      if (existing.getClassGroup().getId() === newEntry.getClassGroup().getId()) {
+      if (
+        existing.getClassGroup().getId() === newEntry.getClassGroup().getId()
+      ) {
         return `Cannot add entry: Class '${newEntry.getClassGroup().getName()}' already has a session at ${time}`;
       }
     }
@@ -172,7 +189,7 @@ export class Timetable implements TimetableInterface {
       const currentCount = this.countSessionsForSubjectAndClassOnDay(
         subject.getId(),
         classGroup.getId(),
-        newEntry.getTimeSlot().getDay()
+        newEntry.getTimeSlot().getDay(),
       );
       return `Cannot add entry: Class '${classGroup.getName()}' already has ${currentCount} session(s) of '${subject.getName()}' today (max: ${subject.getMaxSessionsPerDay()})`;
     }
@@ -188,7 +205,7 @@ export class Timetable implements TimetableInterface {
     const sessionsToday = this.countSessionsForSubjectAndClassOnDay(
       subject.getId(),
       classGroup.getId(),
-      day
+      day,
     );
 
     return sessionsToday >= subject.getMaxSessionsPerDay();
@@ -197,12 +214,13 @@ export class Timetable implements TimetableInterface {
   private countSessionsForSubjectAndClassOnDay(
     subjectId: string,
     classGroupId: string,
-    day: string
+    day: string,
   ): number {
-    return this._entries.filter(entry =>
-      entry.getSubject().getId() === subjectId &&
-      entry.getClassGroup().getId() === classGroupId &&
-      entry.getTimeSlot().getDay() === day
+    return this._entries.filter(
+      (entry) =>
+        entry.getSubject().getId() === subjectId &&
+        entry.getClassGroup().getId() === classGroupId &&
+        entry.getTimeSlot().getDay() === day,
     ).length;
   }
 

@@ -1,10 +1,11 @@
-import { ClassGroup } from './ClassGroup.js';
-import { Room } from './Room.js';
-import { Subject } from './Subject.js';
-import { Teacher } from './Teacher.js';
-import { TimeSlot } from './TimeSlot.js';
+import { ClassGroup } from "./ClassGroup.js";
+import { Room } from "./Room.js";
+import { Subject } from "./Subject.js";
+import { Teacher } from "./Teacher.js";
+import { TimeSlot } from "./TimeSlot.js";
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 interface ScheduleEntryInterface {
   getId(): string;
@@ -30,7 +31,7 @@ export class ScheduleEntry implements ScheduleEntryInterface {
     room: Room,
     subject: Subject,
     classGroup: ClassGroup,
-    timeSlot: TimeSlot
+    timeSlot: TimeSlot,
   ) {
     if (!id || id.trim() === "") {
       throw new Error("ScheduleEntry ID cannot be empty");
@@ -40,7 +41,6 @@ export class ScheduleEntry implements ScheduleEntryInterface {
       throw new Error("ScheduleEntry ID must be a valid UUID");
     }
 
-    
     if (!teacher) {
       throw new Error("Teacher cannot be null");
     }
@@ -59,29 +59,31 @@ export class ScheduleEntry implements ScheduleEntryInterface {
 
     if (!teacher.isQualifiedFor(subject.getId())) {
       throw new Error(
-        `Teacher '${teacher.getName()}' is not qualified to teach '${subject.getName()}'`
+        `Teacher '${teacher.getName()}' is not qualified to teach '${subject.getName()}'`,
       );
     }
 
     if (!room.canHost(subject, classGroup)) {
       const reasons: string[] = [];
       if (!room.canAccommodate(classGroup.getStudentCount())) {
-        reasons.push(`capacity ${room.getCapacity()} < ${classGroup.getStudentCount()} students`);
+        reasons.push(
+          `capacity ${room.getCapacity()} < ${classGroup.getStudentCount()} students`,
+        );
       }
       if (subject.requiresLab() && !room.hasLabEquipment()) {
-        reasons.push('lab equipment required but not available');
+        reasons.push("lab equipment required but not available");
       }
       throw new Error(
-        `Room '${room.getName()}' cannot host '${subject.getName()}' for '${classGroup.getName()}': ${reasons.join(', ')}`
+        `Room '${room.getName()}' cannot host '${subject.getName()}' for '${classGroup.getName()}': ${reasons.join(", ")}`,
       );
     }
 
-    const isAvailable = teacher.getAvailability().some(slot => 
-      slot.equals(timeSlot)
-    );
+    const isAvailable = teacher
+      .getAvailability()
+      .some((slot) => slot.equals(timeSlot));
     if (!isAvailable) {
       throw new Error(
-        `Teacher '${teacher.getName()}' is not available at ${timeSlot.toString()}`
+        `Teacher '${teacher.getName()}' is not available at ${timeSlot.toString()}`,
       );
     }
 

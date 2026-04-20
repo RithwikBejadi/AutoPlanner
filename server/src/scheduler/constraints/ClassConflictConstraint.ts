@@ -1,12 +1,15 @@
-import type { IConstraint, ConstraintContext, ConstraintResult } from './Constraint.js';
+import type {
+  IConstraint,
+  ConstraintContext,
+  ConstraintResult,
+} from "./Constraint.js";
 
 export class ClassConflictConstraint implements IConstraint {
-  readonly name = 'ClassConflictConstraint';
+  readonly name = "ClassConflictConstraint";
 
   check(ctx: ConstraintContext): ConstraintResult {
-    
     const concurrentConflict = ctx.scheduledEntries.find(
-      entry =>
+      (entry) =>
         entry.getClassGroup().getId() === ctx.classGroup.getId() &&
         entry.getTimeSlot().overlapsWith(ctx.timeSlot),
     );
@@ -21,10 +24,9 @@ export class ClassConflictConstraint implements IConstraint {
       };
     }
 
-    
     const day = ctx.timeSlot.getDay();
     const sessionsToday = ctx.scheduledEntries.filter(
-      entry =>
+      (entry) =>
         entry.getClassGroup().getId() === ctx.classGroup.getId() &&
         entry.getSubject().getId() === ctx.subject.getId() &&
         entry.getTimeSlot().getDay() === day,
