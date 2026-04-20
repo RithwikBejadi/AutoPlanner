@@ -152,6 +152,8 @@ npm run dev
 Base URL: `/api`
 
 - `GET /health`
+- `GET /healthz`
+- `GET /`
 - `GET /api/auth/google`
 - `GET /api/auth/google/callback`
 - `GET /api/auth/me`
@@ -183,6 +185,7 @@ The scheduler validates assignments against these constraints:
 - Set backend `CORS_ORIGIN` to frontend URL(s).
 - Set backend `GOOGLE_REDIRECT_URI` to deployed backend callback URL.
 - Set backend `FRONTEND_URL` to deployed frontend URL.
+- Configure Render's health check path to `/health` or `/healthz`.
 - In production, auth cookies are configured for cross-origin usage (`Secure` + `SameSite=None`).
 
 ## Troubleshooting

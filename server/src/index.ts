@@ -57,13 +57,17 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-app.get("/health", (req: Request, res: Response) => {
-  res.json({
+const healthResponse = (req: Request, res: Response) => {
+  res.status(200).json({
     status: "ok",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
   });
-});
+};
+
+app.get("/", healthResponse);
+app.get("/health", healthResponse);
+app.get("/healthz", healthResponse);
 
 app.use("/api/auth", authRouter);
 app.use("/api/subjects", subjectRouter);
